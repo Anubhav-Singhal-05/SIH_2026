@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { font-size: 14px; }
+  body {
+    @apply bg-base-900 text-steel-300 font-sans antialiased;
+  }
+  ::selection { @apply bg-accent-deep text-steel-100; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { @apply bg-base-950; }
+  ::-webkit-scrollbar-thumb { @apply bg-steel-700; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-steel-600; }
+}
+
+@layer components {
+  .panel { @apply bg-base-850 border border-steel-800 shadow-panel rounded; }
+  .inset-panel { @apply bg-base-950 border border-steel-900 rounded; }
+  .label-xs { @apply text-[10px] uppercase tracking-[0.14em] text-steel-500 font-medium; }
+  .btn-base { @apply inline-flex items-center gap-1.5 rounded border text-[12px] font-medium px-3 py-1.5 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #1c1f24 0px, #272b32 200px, #1c1f24 400px);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer {
+  0% { background-position: -300px 0; }
+  100% { background-position: 300px 0; }
+}
