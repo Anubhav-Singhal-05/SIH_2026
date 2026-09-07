@@ -1,0 +1,43 @@
+{
+  "algorithm": "sha256-leaf0x00-parent0x01-empty0x02-v1",
+  "empty_root": "0x<EMPTY_ROOT>",
+  "leaf_vectors": [
+    {
+      "input": {
+        "assetId": "0",
+        "ownerDidHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "documentHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "metadataHash": "0x3333333333333333333333333333333333333333333333333333333333333333",
+        "documentVersion": "1"
+      },
+      "leaf": "0x<LEAF0>"
+    },
+    {
+      "input": {
+        "assetId": "340282366920938463463374607431768211455",
+        "ownerDidHash": "0x4444444444444444444444444444444444444444444444444444444444444444",
+        "documentHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
+        "metadataHash": "0x6666666666666666666666666666666666666666666666666666666666666666",
+        "documentVersion": "18446744073709551615"
+      },
+      "leaf": "0x<LEAFMAX>"
+    }
+  ],
+  "tree_vectors": [
+    {
+      "name": "one leaf",
+      "leaves": ["0x<LEAF0>"],
+      "root": "0x<LEAF0>"
+    },
+    {
+      "name": "even leaves",
+      "leaves": ["0x<LEAF0>", "0x<LEAFMAX>"],
+      "root": "0x<ROOT2>"
+    },
+    {
+      "name": "odd leaves (3)",
+      "leaves": ["0x<LEAF0>", "0x<LEAFMAX>", "0x<LEAF3>"],
+      "root": "0x<ROOT3>"
+    }
+  ]
+}

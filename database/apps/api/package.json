@@ -1,0 +1,15 @@
+{
+  "name": "@sih/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "dependencies": {
+    "@sih/database": "*",
+    "@sih/protocol": "*"
+  },
+  "scripts": {
+    "start": "node src/run.js",
+    "test": "node --test --test-concurrency=1"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@sih/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./db": "./src/db.js",
+    "./uuid7": "./src/uuid7.js",
+    "./migrate": "./src/migrate.js",
+    "./schema": "./src/schema/index.js",
+    "./test-util": "./src/test-util.js",
+    "./fixtures": "./fixtures/fixtures.js"
+  },
+  "scripts": {
+    "migrate": "node src/migrate.js up",
+    "migrate:status": "node src/migrate.js status",
+    "test": "node --test --test-concurrency=1",
+    "verify": "node scripts/backup-verify.js"
+  }
+}

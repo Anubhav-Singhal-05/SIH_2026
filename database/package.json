@@ -1,0 +1,29 @@
+{
+  "name": "sih-26",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "database"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "migrate": "npm run migrate -w database",
+    "migrate:status": "npm run migrate:status -w database",
+    "indexer": "npm run start -w apps/api -- indexer",
+    "reconciler": "npm run start -w apps/api -- reconciler",
+    "lifecycle": "npm run start -w apps/api -- lifecycle",
+    "backup:verify": "npm run verify -w database -- backup"
+  },
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mongodb": "^6.21.0"
+  }
+}

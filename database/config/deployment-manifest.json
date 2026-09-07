@@ -1,0 +1,8 @@
+{
+  "chainId": 31337,
+  "deploymentBlock": 1,
+  "abiVersion": "1",
+  "contracts": ["IdentityRegistry", "AssetRegistry", "AssetAccessRegistry", "MerkleRootRegistry", "InheritanceRegistry"],
+  "confirmationDepth": 12,
+  "_comment": "Immutable deployment record. Indexer starts at deploymentBlock — never 0, never 'latest'. Changes to event payload, root bytes, asset id type, permission policy or finalization semantics require cross-team review before migration (spec §11)."
+}

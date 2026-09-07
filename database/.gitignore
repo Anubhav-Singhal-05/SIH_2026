@@ -1,0 +1,15 @@
+# MongoDB Atlas credentials — never commit
+atlas-credentials.env
+.atlas-credentials.env
+node_modules/
+*.log
+
+# Python (dummy-data population script)
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.env
+!atlas-credentials.env.example
+!.env.example
+populate_summary.txt

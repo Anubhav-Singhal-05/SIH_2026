@@ -1,0 +1,15 @@
+{
+  "name": "@sih/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./merkle": "./src/merkle/index.js",
+    "./vectors": "./test-vectors/merkle-vectors.json"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}
