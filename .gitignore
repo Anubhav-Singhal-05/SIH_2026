@@ -1,6 +1,8 @@
 # Dependencies & Package managers
-*/node_modules/
-*/dist/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
 
 # Sensitive credentials & environment files (Never commit)
 *.env
@@ -10,8 +12,10 @@ atlas-credentials.env
 .atlas-credentials.env
 **/*atlas-credentials.env*
 
-# Documentation, specifications, and test case plans
+# Documentation, specifications, and test case plans (allow root README.md only)
 *.md
+*/**/*.md
+!/README.md
 
 # Presentation & Office assets
 *.docx
