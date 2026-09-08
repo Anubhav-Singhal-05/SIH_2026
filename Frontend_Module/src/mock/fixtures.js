@@ -18,7 +18,7 @@ export const OTHER_DIDS = [
 ]
 
 export const identities = [
-  { did: SELF_DID, controllerAddress: addr(), encryptionKeyFingerprint: fp(), status: 'ACTIVE', rootVersion: 7, rootHistory: [
+  { did: SELF_DID, name: 'Alcott Main Operator', passkey: 'passkey123', controllerAddress: addr(), encryptionKeyFingerprint: fp(), status: 'ACTIVE', rootVersion: 7, rootHistory: [
     { version: 7, rootHash: h64(), at: D(2), action: 'asset_minted' },
     { version: 6, rootHash: h64(), at: D(9), action: 'access_granted' },
     { version: 5, rootHash: h64(), at: D(21), action: 'asset_transferred' },
@@ -27,7 +27,7 @@ export const identities = [
     { version: 2, rootHash: h64(), at: D(70), action: 'controller_rotated' },
     { version: 1, rootHash: h64(), at: D(90), action: 'genesis' },
   ] },
-  ...OTHER_DIDS.map((did, i) => ({ did, controllerAddress: addr(), encryptionKeyFingerprint: fp(), status: i === 3 ? 'SUSPENDED' : 'ACTIVE', rootVersion: 3 + i, rootHistory: [
+  ...OTHER_DIDS.map((did, i) => ({ did, name: did.split(':')[2] || 'Operator', passkey: 'passkey123', controllerAddress: addr(), encryptionKeyFingerprint: fp(), status: i === 3 ? 'SUSPENDED' : 'ACTIVE', rootVersion: 3 + i, rootHistory: [
     { version: 3 + i, rootHash: h64(), at: D(4 + i), action: 'asset_minted' },
     { version: 2 + i, rootHash: h64(), at: D(30 + i), action: 'access_granted' },
     { version: 1 + i, rootHash: h64(), at: D(60 + i), action: 'genesis' },
@@ -91,6 +91,7 @@ const ACTION_TYPES = ['mint_intent','document_update','transfer','grant_created'
 export const audits = Array.from({ length: 18 }, (_, i) => ({
   id: uuid(),
   actorDidHash: hex64(),
+  actorDid: SELF_DID,
   action: ACTION_TYPES[i % ACTION_TYPES.length],
   target: i % 3 === 0 ? OTHER_DIDS[i % OTHER_DIDS.length] : assets[i % assets.length].assetId,
   result: i === 5 || i === 11 ? 'failure' : 'success',

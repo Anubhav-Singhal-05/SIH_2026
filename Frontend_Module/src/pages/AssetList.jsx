@@ -17,9 +17,13 @@ export default function AssetList() {
 
   useEffect(() => { const t = setTimeout(() => setLoading(false), 650); return () => clearTimeout(t) }, [])
 
-  const sharedIds = new Set(grants.filter((g) => g.granteeDid === session.did).map((g) => g.assetId))
+  const sharedIds = new Set(grants.filter((g) => session?.did && g.granteeDid === session.did).map((g) => String(g.assetId)))
   const rows = assets
-    .filter((a) => (ownership === 'OWNED' ? a.ownerDid === session.did : ownership === 'SHARED' ? sharedIds.has(a.assetId) : true))
+    .filter((a) => {
+      if (ownership === 'OWNED') return Boolean(session?.did && a.ownerDid === session.did)
+      if (ownership === 'SHARED') return sharedIds.has(String(a.assetId))
+      return Boolean((session?.did && a.ownerDid === session.did) || sharedIds.has(String(a.assetId)))
+    })
     .filter((a) => status === 'ALL' || a.status === status)
 
   return (
@@ -30,10 +34,10 @@ export default function AssetList() {
         actions={<Link to='/assets/upload'><Btn variant='primary'><Plus size={12} /> Mint asset</Btn></Link>}
       />
       <div className='flex items-center gap-3 mb-3'>
-        <select className={selectCls + ' w-44'} value={ownership} onChange={(e) => setOwnership(e.target.value)}>
+        <select className={selectCls + ' w-52'} value={ownership} onChange={(e) => setOwnership(e.target.value)}>
           <option value='OWNED'>OWNED BY ME</option>
           <option value='SHARED'>SHARED WITH ME</option>
-          <option value='ALL'>ALL VISIBLE</option>
+          <option value='ALL'>ALL ACCESSIBLE TO ME</option>
         </select>
         <select className={selectCls + ' w-44'} value={status} onChange={(e) => setStatus(e.target.value)}>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -66,7 +70,7 @@ export default function AssetList() {
                     <span className='block font-mono text-[10px] text-steel-600'>{a.contentType} / v{a.documentVersion}</span>
                   </td>
                   <td className='px-3 py-2'><Badge status={a.status} /></td>
-                  <td className='px-3 py-2 font-mono text-[11px] text-steel-400'>{a.ownerDid === session.did ? '(self)' : a.ownerDid}</td>
+                  <td className='px-3 py-2 font-mono text-[11px] text-steel-400'>{session?.did && a.ownerDid === session.did ? '(self)' : a.ownerDid}</td>
                   <td className='px-3 py-2 font-mono text-[11px] text-steel-500'>{fmtTime(a.updatedAt)}</td>
                   <td className='px-3 py-2 text-right pr-3'><Link to={'/assets/' + a.assetId} className='text-accent hover:text-accent-bright inline-flex items-center gap-1 font-mono text-[11px]'>OPEN <ArrowRight size={11} /></Link></td>
                 </tr>

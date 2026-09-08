@@ -13,7 +13,15 @@ export const assetId = () => { let s = String(Math.floor(Math.random() * 9) + 1)
 export const uuid = () => { const s = (n) => hex(n); return s(8) + '-' + s(4) + '-4' + s(3) + '-a' + s(3) + '-' + s(12) }
 export const shortHash = (h, a = 10, b = 6) => (h || '').slice(0, a) + '...' + (h || '').slice(-b)
 export const now = () => Date.now()
-export const fmtTime = (t) => new Date(t).toISOString().replace('T', ' ').slice(0, 19)
+export const fmtTime = (t) => {
+  if (!t) return '-'
+  try {
+    const d = new Date(t)
+    return isNaN(d.getTime()) ? '-' : d.toISOString().replace('T', ' ').slice(0, 19)
+  } catch {
+    return '-'
+  }
+}
 
 // Stable error codes + operator-honest copy (mirrors backend ErrorResponse).
 export const ERROR_COPY = {

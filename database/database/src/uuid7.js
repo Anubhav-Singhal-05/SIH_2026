@@ -4,8 +4,10 @@
 import { randomBytes } from 'node:crypto';
 
 export function uuidv7(now = Date.now()) {
+  // JS bitwise ops are 32-bit signed — use an arithmetic mask for the 48-bit ts.
+  const ts48 = now % 281474976710656; // 2**48
   const ts = Buffer.alloc(6);
-  ts.writeUIntBE(now & 0xffffffffffff, 0, 6);
+  ts.writeUIntBE(ts48, 0, 6);
   const rand = randomBytes(10);
   const bytes = Buffer.concat([ts, rand]);
   bytes[6] = ((bytes[6] & 0x0f) | 0x70); // version 7

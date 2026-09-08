@@ -20,13 +20,26 @@ function OpCard({ id }) {
 
 export default function Dashboard() {
   const session = useStore((s) => s.session)
-  const identity = useIdentity(session.did)
+  const identity = useIdentity(session ? session.did : null)
   const assets = useStore((s) => s.assets)
   const grants = useStore((s) => s.grants)
   const audits = useStore((s) => s.audits)
   const opOrder = useStore((s) => s.opOrder)
-  const owned = assets.filter((a) => a.ownerDid === session.did)
-  const shared = grants.filter((g) => g.granteeDid === session.did && g.status === 'ACTIVE')
+  const owned = assets.filter((a) => session?.did && a.ownerDid === session.did)
+  const shared = grants.filter((g) => session?.did && g.granteeDid === session.did && g.status === 'ACTIVE')
+  const ownedAssetIds = new Set(owned.map((a) => String(a.assetId)))
+  const sharedAssetIds = new Set(shared.map((g) => String(g.assetId)))
+  const allUserAssetIds = new Set([...ownedAssetIds, ...sharedAssetIds])
+
+  const userAudits = audits.filter((a) => {
+    if (!session?.did) return false
+    if (a.actorDid && a.actorDid === session.did) return true
+    if (a.target && (a.target === session.did || a.target.includes(session.did))) return true
+    if (a.target && allUserAssetIds.has(String(a.target))) return true
+    if (a.operationId && allUserAssetIds.has(String(a.operationId))) return true
+    return false
+  })
+
   const stats = [
     { icon: Activity, label: 'DID STATUS', value: identity ? identity.status : '-', badge: identity && identity.status },
     { icon: GitBranch, label: 'CURRENT ROOT', value: identity ? 'v' + identity.rootVersion : '-' },
@@ -35,7 +48,7 @@ export default function Dashboard() {
   ]
   return (
     <div>
-      <PageHead title='Dashboard' sub={'overview / did:platform:alcott.main'} actions={<Link to='/assets/upload'><Btn variant='primary'><Plus size={12} /> Mint asset</Btn></Link>} />
+      <PageHead title='Dashboard' sub={'overview / ' + (session?.did || 'did:platform:alcott.main')} actions={<Link to='/assets/upload'><Btn variant='primary'><Plus size={12} /> Mint asset</Btn></Link>} />
       <div className='grid grid-cols-4 gap-3 mb-4'>
         {stats.map((s) => (
           <div key={s.label} className='panel px-3 py-2.5'>
@@ -54,18 +67,24 @@ export default function Dashboard() {
             )}
           </Panel>
           <Panel title='Recent audit events' pad={false}>
-            <table className='w-full text-[12px]'>
-              <tbody>
-                {audits.slice(0, 8).map((a) => (
-                  <tr key={a.id} className='border-b border-steel-900 last:border-b-0'>
-                    <td className='px-3 py-1.5 font-mono text-[11px] text-steel-400'>{fmtTime(a.at)}</td>
-                    <td className='px-3 py-1.5 font-mono text-[11px] text-steel-200'>{a.action}</td>
-                    <td className='px-3 py-1.5'><CopyText value={a.target} /></td>
-                    <td className='px-3 py-1.5 text-right pr-3'><span className={a.result === 'success' ? 'font-mono text-[10px] text-ok' : 'font-mono text-[10px] text-bad'}>{a.result.toUpperCase()}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {userAudits.length === 0 ? (
+              <div className='p-3'>
+                <EmptyState lines={['no audit events recorded for this identity yet', 'mint an asset or execute an operation to generate audit trails']} />
+              </div>
+            ) : (
+              <table className='w-full text-[12px]'>
+                <tbody>
+                  {userAudits.slice(0, 8).map((a) => (
+                    <tr key={a.id} className='border-b border-steel-900 last:border-b-0'>
+                      <td className='px-3 py-1.5 font-mono text-[11px] text-steel-400'>{fmtTime(a.at)}</td>
+                      <td className='px-3 py-1.5 font-mono text-[11px] text-steel-200'>{a.action}</td>
+                      <td className='px-3 py-1.5'><CopyText value={a.target} /></td>
+                      <td className='px-3 py-1.5 text-right pr-3'><span className={a.result === 'success' ? 'font-mono text-[10px] text-ok' : 'font-mono text-[10px] text-bad'}>{a.result.toUpperCase()}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </Panel>
         </div>
         <div className='col-span-2 space-y-3'>
@@ -89,7 +108,7 @@ export default function Dashboard() {
           <Panel title='Identity summary'>
             <div className='space-y-1.5 text-[12px]'>
               <div className='flex justify-between'><span className='text-steel-500'>root version</span><span className='font-mono text-steel-200'>v{identity ? identity.rootVersion : '-'}</span></div>
-              <div className='flex justify-between'><span className='text-steel-500'>active grants</span><span className='font-mono text-steel-200'>{grants.filter((g) => g.status === 'ACTIVE').length}</span></div>
+              <div className='flex justify-between'><span className='text-steel-500'>active grants</span><span className='font-mono text-steel-200'>{grants.filter((g) => g.status === 'ACTIVE' && (g.granteeDid === session?.did || ownedAssetIds.has(String(g.assetId)))).length}</span></div>
               <div className='flex justify-between'><span className='text-steel-500'>inheritance</span><Link to='/inheritance' className='font-mono text-accent hover:text-accent-bright'>manage →</Link></div>
               <div className='flex justify-between'><span className='text-steel-500'>identity detail</span><Link to='/identity' className='font-mono text-accent hover:text-accent-bright'>open →</Link></div>
             </div>

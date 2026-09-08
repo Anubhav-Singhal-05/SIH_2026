@@ -11,27 +11,47 @@ function OpLine({ id }) { const op = useOp(id); return op ? <div className='mt-2
 export default function InheritanceSetup() {
   const session = useStore((s) => s.session)
   const inheritance = useStore((s) => s.inheritance)
+  const inheritancesByDid = useStore((s) => s.inheritancesByDid)
   const assets = useStore((s) => s.assets)
+  const identities = useStore((s) => s.identities)
   const patchInheritance = useStore((s) => s.patchInheritance)
   const startOperation = useStore((s) => s.startOperation)
   const opAwaitStepUp = useStore((s) => s.opAwaitStepUp)
   const opAwaitSignature = useStore((s) => s.opAwaitSignature)
-  const [nominee, setNominee] = useState(inheritance.defaultNomineeDid)
-  const [overrides, setOverrides] = useState(inheritance.perAssetOverrides)
+
+  const effectiveRule = (session?.did && inheritancesByDid?.[session.did]) || (session?.did && inheritance?.ownerDid === session.did ? inheritance : {
+    ownerDid: session?.did || 'did:sih:unknown',
+    defaultNomineeDid: '',
+    perAssetOverrides: [],
+    authoritySet: [
+      { label: 'AUTH-1', did: 'did:platform:meridian.trust', signed: false },
+      { label: 'AUTH-2', did: 'did:platform:northgate.custody', signed: false },
+      { label: 'AUTH-3', did: 'did:platform:quill.arch', signed: false },
+    ],
+    signaturesRequired: 2,
+    status: 'NOT_CONFIGURED',
+    activatedAt: null,
+    batchProgress: [],
+  })
+
+  const [nominee, setNominee] = useState(effectiveRule.defaultNomineeDid || '')
+  const [overrides, setOverrides] = useState(effectiveRule.perAssetOverrides || [])
   const [newAsset, setNewAsset] = useState('')
   const [newBenef, setNewBenef] = useState('')
   const [opId, setOpId] = useState(null)
   const [modal, setModal] = useState(false)
   const op = useOp(opId)
 
+  const ownedAssets = assets.filter((a) => session?.did && a.ownerDid === session.did)
+
   const save = () => {
-    const payload = { defaultNomineeDid: nominee, perAssetOverrides: overrides }
+    const payload = { defaultNomineeDid: nominee, perAssetOverrides: overrides, status: 'CONFIGURED' }
     const id = startOperation({ type: 'inheritance_config', label: 'save inheritance rule', relatedId: session.did, payload })
     setOpId(id)
     setTimeout(() => opAwaitStepUp(id), 650)
     setModal(true)
   }
-  const dirty = nominee !== inheritance.defaultNomineeDid || JSON.stringify(overrides) !== JSON.stringify(inheritance.perAssetOverrides)
+  const dirty = nominee !== effectiveRule.defaultNomineeDid || JSON.stringify(overrides) !== JSON.stringify(effectiveRule.perAssetOverrides)
   return (
     <div>
       <PageHead
@@ -43,8 +63,11 @@ export default function InheritanceSetup() {
         <div className='col-span-3 space-y-3'>
           <Panel title='Default nominee'>
             <Field label='Nominee DID (receives all assets without an override)'>
-              <select className={selectCls} value={nominee} onChange={(e) => setNominee(e.target.value)} disabled={inheritance.status === 'ACTIVE'}>
-                {OTHER_DIDS.map((d) => <option key={d} value={d}>{d}</option>)}
+              <select className={selectCls} value={nominee} onChange={(e) => setNominee(e.target.value)} disabled={effectiveRule.status === 'ACTIVE'}>
+                <option value=''>— select nominee did —</option>
+                {identities.filter((i) => i.did !== session?.did).map((i) => (
+                  <option key={i.did} value={i.did}>{i.name ? `${i.name} (${i.did.slice(0, 20)}…)` : i.did}</option>
+                ))}
               </select>
             </Field>
             <p className='text-[11px] text-steel-500 mt-2 leading-relaxed'>The nominee can never activate their own inheritance alone: activation requires 2-of-3 independent authority signatures, and the nominee holds none of them.</p>
@@ -64,20 +87,32 @@ export default function InheritanceSetup() {
               </tbody>
             </table>
             <div className='flex items-end gap-2 p-3 border-t border-steel-800'>
-              <Field label='Asset'><select className={selectCls + ' w-56'} value={newAsset} onChange={(e) => setNewAsset(e.target.value)}><option value=''>— select —</option>{assets.filter((a) => a.ownerDid === session.did).map((a) => <option key={a.assetId} value={a.assetId}>{a.name}</option>)}</select></Field>
-              <Field label='Beneficiary'><select className={selectCls + ' w-56'} value={newBenef} onChange={(e) => setNewBenef(e.target.value)}><option value=''>— select —</option>{OTHER_DIDS.map((d) => <option key={d} value={d}>{d}</option>)}</select></Field>
-              <Btn onClick={() => { if (newAsset && newBenef) { setOverrides([...overrides.filter((o) => o.assetId !== newAsset), { assetId: newAsset, beneficiaryDid: newBenef }]); setNewAsset(''); setNewBenef('') } }}><Plus size={12} /> Add</Btn>
+              <Field label='Asset'>
+                <select className={selectCls + ' w-56'} value={newAsset} onChange={(e) => setNewAsset(e.target.value)} disabled={ownedAssets.length === 0}>
+                  <option value=''>{ownedAssets.length === 0 ? '— no owned assets —' : '— select asset —'}</option>
+                  {ownedAssets.map((a) => <option key={a.assetId} value={a.assetId}>{a.name}</option>)}
+                </select>
+              </Field>
+              <Field label='Beneficiary'>
+                <select className={selectCls + ' w-56'} value={newBenef} onChange={(e) => setNewBenef(e.target.value)}>
+                  <option value=''>— select beneficiary —</option>
+                  {identities.filter((i) => i.did !== session?.did).map((i) => (
+                    <option key={i.did} value={i.did}>{i.name ? `${i.name} (${i.did.slice(0, 16)}…)` : i.did}</option>
+                  ))}
+                </select>
+              </Field>
+              <Btn disabled={!newAsset || !newBenef} onClick={() => { if (newAsset && newBenef) { setOverrides([...overrides.filter((o) => o.assetId !== newAsset), { assetId: newAsset, beneficiaryDid: newBenef }]); setNewAsset(''); setNewBenef('') } }}><Plus size={12} /> Add</Btn>
             </div>
           </Panel>
         </div>
         <div className='col-span-2 space-y-3'>
           <Panel title='Rule state'>
-            <KeyRow k='Status'><Badge status={inheritance.status} /></KeyRow>
+            <KeyRow k='Status'><Badge status={effectiveRule.status} /></KeyRow>
             <KeyRow k='Authorities'><span className='font-mono text-[12px]'>2-of-3 signatures required</span></KeyRow>
-            <KeyRow k='Activations'><span className='font-mono text-[12px]'>{inheritance.activatedAt ? new Date(inheritance.activatedAt).toISOString().slice(0, 19) : 'not activated'}</span></KeyRow>
+            <KeyRow k='Activations'><span className='font-mono text-[12px]'>{effectiveRule.activatedAt ? new Date(effectiveRule.activatedAt).toISOString().slice(0, 19) : 'not activated'}</span></KeyRow>
           </Panel>
           <Panel title='Save configuration'>
-            <Btn variant='primary' className='w-full justify-center' disabled={!dirty || inheritance.status === 'ACTIVE'} onClick={save}>Save via step-up</Btn>
+            <Btn variant='primary' className='w-full justify-center' disabled={!dirty || effectiveRule.status === 'ACTIVE'} onClick={save}>Save via step-up</Btn>
             {op && <OpLine id={op.id} />}
           </Panel>
         </div>

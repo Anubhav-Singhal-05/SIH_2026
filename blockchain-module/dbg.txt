@@ -1,0 +1,202 @@
+No files changed, compilation skipped
+
+Ran 1 test for test/Permit.t.sol:PermitTest
+[FAIL: next call did not revert as expected] test_BC_PERMIT_002_nonAttesterSignerReverts() (gas: 35609)
+Traces:
+  [1905150] PermitTest::setUp()
+    Γö£ΓöÇ [0] VM::startPrank(DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    Γö£ΓöÇ [0] VM::deployCode("src/MerkleRootRegistry.sol:MerkleRootRegistry")
+    Γöé   Γö£ΓöÇ [806703] ΓåÆ new MerkleRootRegistry@0x34A1D3fff3958843C43aD80F30b94c510645C316
+    Γöé   Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38], sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   Γöé   ΓööΓöÇ ΓåÉ [Return] 3904 bytes of code
+    Γöé   ΓööΓöÇ ΓåÉ [Return] MerkleRootRegistry: [0x34A1D3fff3958843C43aD80F30b94c510645C316]
+    Γö£ΓöÇ [0] VM::deployCode("src/IdentityRegistry.sol:IdentityRegistry", 0x00000000000000000000000034a1d3fff3958843c43ad80f30b94c510645c316)
+    Γöé   Γö£ΓöÇ [962950] ΓåÆ new IdentityRegistry@0x90193C961A926261B756D1E5bb255e67ff9498A1
+    Γöé   Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38], sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   Γöé   ΓööΓöÇ ΓåÉ [Return] 4683 bytes of code
+    Γöé   ΓööΓöÇ ΓåÉ [Return] IdentityRegistry: [0x90193C961A926261B756D1E5bb255e67ff9498A1]
+    Γö£ΓöÇ [0] VM::deployCode("src/AssetAccessRegistry.sol:AssetAccessRegistry")
+    Γöé   Γö£ΓöÇ [1367708] ΓåÆ new AssetAccessRegistry@0xA8452Ec99ce0C64f20701dB7dD3abDb607c00496
+    Γöé   Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38], sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   Γöé   ΓööΓöÇ ΓåÉ [Return] 6706 bytes of code
+    Γöé   ΓööΓöÇ ΓåÉ [Return] AssetAccessRegistry: [0xA8452Ec99ce0C64f20701dB7dD3abDb607c00496]
+    Γö£ΓöÇ [0] VM::deployCode("src/AssetRegistry.sol:AssetRegistry")
+    Γöé   Γö£ΓöÇ [1423370] ΓåÆ new AssetRegistry@0xBb2180ebd78ce97360503434eD37fcf4a1Df61c3
+    Γöé   Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38], sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   Γöé   ΓööΓöÇ ΓåÉ [Return] 6984 bytes of code
+    Γöé   ΓööΓöÇ ΓåÉ [Return] AssetRegistry: [0xBb2180ebd78ce97360503434eD37fcf4a1Df61c3]
+    Γö£ΓöÇ [0] VM::deployCode("src/InheritanceRegistry.sol:InheritanceRegistry")
+    Γöé   Γö£ΓöÇ [1419579] ΓåÆ new InheritanceRegistry@0xDB8cFf278adCCF9E9b5da745B44E754fC4EE3C76
+    Γöé   Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38], sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   Γöé   ΓööΓöÇ ΓåÉ [Return] 6965 bytes of code
+    Γöé   ΓööΓöÇ ΓåÉ [Return] InheritanceRegistry: [0xDB8cFf278adCCF9E9b5da745B44E754fC4EE3C76]
+    Γö£ΓöÇ [421] IdentityRegistry::DEFAULT_ADMIN_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    Γö£ΓöÇ [50798] IdentityRegistry::grantRole(0x0000000000000000000000000000000000000000000000000000000000000000, PermitTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496])
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: PermitTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [526] MerkleRootRegistry::DEFAULT_ADMIN_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    Γö£ΓöÇ [50837] MerkleRootRegistry::grantRole(0x0000000000000000000000000000000000000000000000000000000000000000, PermitTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496])
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: PermitTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [472] AssetRegistry::DEFAULT_ADMIN_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    Γö£ΓöÇ [50827] AssetRegistry::grantRole(0x0000000000000000000000000000000000000000000000000000000000000000, PermitTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496])
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: PermitTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    Γö£ΓöÇ [548] AssetAccessRegistry::DEFAULT_ADMIN_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    Γö£ΓöÇ [50859] AssetAccessRegistry::grantRole(0x0000000000000000000000000000000000000000000000000000000000000000, PermitTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496])
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: PermitTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [592] InheritanceRegistry::DEFAULT_ADMIN_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    Γö£ΓöÇ [50837] InheritanceRegistry::grantRole(0x0000000000000000000000000000000000000000000000000000000000000000, PermitTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496])
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: PermitTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [68865] MerkleRootRegistry::setWriters(IdentityRegistry: [0x90193C961A926261B756D1E5bb255e67ff9498A1], AssetRegistry: [0xBb2180ebd78ce97360503434eD37fcf4a1Df61c3])
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    Γö£ΓöÇ [68927] AssetAccessRegistry::setWriters(IdentityRegistry: [0x90193C961A926261B756D1E5bb255e67ff9498A1], AssetRegistry: [0xBb2180ebd78ce97360503434eD37fcf4a1Df61c3])
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    Γö£ΓöÇ [114871] AssetRegistry::setWriters(IdentityRegistry: [0x90193C961A926261B756D1E5bb255e67ff9498A1], MerkleRootRegistry: [0x34A1D3fff3958843C43aD80F30b94c510645C316], AssetAccessRegistry: [0xA8452Ec99ce0C64f20701dB7dD3abDb607c00496], InheritanceRegistry: [0xDB8cFf278adCCF9E9b5da745B44E754fC4EE3C76])
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    Γö£ΓöÇ [68887] InheritanceRegistry::setWriters(IdentityRegistry: [0x90193C961A926261B756D1E5bb255e67ff9498A1], AssetRegistry: [0xBb2180ebd78ce97360503434eD37fcf4a1Df61c3])
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    Γö£ΓöÇ [400] IdentityRegistry::STEP_UP_ATTESTER_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8
+    Γö£ΓöÇ [51182] IdentityRegistry::grantRole(0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8, 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8, account: 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [557] IdentityRegistry::PAUSER_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a
+    Γö£ΓöÇ [50966] IdentityRegistry::grantRole(0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a, 0x00000000000000000000000000000000000B0b00)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a, account: 0x00000000000000000000000000000000000B0b00, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [421] IdentityRegistry::DEFAULT_ADMIN_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    Γö£ΓöÇ [50594] IdentityRegistry::grantRole(0x0000000000000000000000000000000000000000000000000000000000000000, 0x0000000000000000000000000000000000A11ce0)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: 0x0000000000000000000000000000000000A11ce0, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [505] MerkleRootRegistry::STEP_UP_ATTESTER_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8
+    Γö£ΓöÇ [51221] MerkleRootRegistry::grantRole(0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8, 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8, account: 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [615] MerkleRootRegistry::PAUSER_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a
+    Γö£ΓöÇ [51005] MerkleRootRegistry::grantRole(0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a, 0x00000000000000000000000000000000000B0b00)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a, account: 0x00000000000000000000000000000000000B0b00, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [526] MerkleRootRegistry::DEFAULT_ADMIN_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    Γö£ΓöÇ [50633] MerkleRootRegistry::grantRole(0x0000000000000000000000000000000000000000000000000000000000000000, 0x0000000000000000000000000000000000A11ce0)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: 0x0000000000000000000000000000000000A11ce0, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [623] AssetRegistry::ASSET_ISSUER_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0f4a1624d2cfe63df5cbdc9b68708c627beb25c9251a3d1d6d435900501f6d56
+    Γö£ΓöÇ [50983] AssetRegistry::grantRole(0x0f4a1624d2cfe63df5cbdc9b68708c627beb25c9251a3d1d6d435900501f6d56, 0x0000000000000000000000000000000000015500)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0f4a1624d2cfe63df5cbdc9b68708c627beb25c9251a3d1d6d435900501f6d56, account: 0x0000000000000000000000000000000000015500, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    Γö£ΓöÇ [447] AssetRegistry::STEP_UP_ATTESTER_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8
+    Γö£ΓöÇ [51211] AssetRegistry::grantRole(0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8, 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8, account: 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    Γö£ΓöÇ [667] AssetRegistry::PAUSER_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a
+    Γö£ΓöÇ [50995] AssetRegistry::grantRole(0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a, 0x00000000000000000000000000000000000B0b00)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a, account: 0x00000000000000000000000000000000000B0b00, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    Γö£ΓöÇ [472] AssetRegistry::DEFAULT_ADMIN_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    Γö£ΓöÇ [50623] AssetRegistry::grantRole(0x0000000000000000000000000000000000000000000000000000000000000000, 0x0000000000000000000000000000000000A11ce0)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: 0x0000000000000000000000000000000000A11ce0, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    Γö£ΓöÇ [527] AssetAccessRegistry::STEP_UP_ATTESTER_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8
+    Γö£ΓöÇ [51243] AssetAccessRegistry::grantRole(0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8, 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8, account: 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [747] AssetAccessRegistry::PAUSER_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a
+    Γö£ΓöÇ [51027] AssetAccessRegistry::grantRole(0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a, 0x00000000000000000000000000000000000B0b00)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a, account: 0x00000000000000000000000000000000000B0b00, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [548] AssetAccessRegistry::DEFAULT_ADMIN_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    Γö£ΓöÇ [50655] AssetAccessRegistry::grantRole(0x0000000000000000000000000000000000000000000000000000000000000000, 0x0000000000000000000000000000000000A11ce0)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: 0x0000000000000000000000000000000000A11ce0, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [549] InheritanceRegistry::STEP_UP_ATTESTER_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8
+    Γö£ΓöÇ [51221] InheritanceRegistry::grantRole(0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8, 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x8a4a312f96b77af442e59d6cb0025aab3fa30dfe1d7f6fd477e13f65f1823aa8, account: 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [703] InheritanceRegistry::PAUSER_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a
+    Γö£ΓöÇ [51005] InheritanceRegistry::grantRole(0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a, 0x00000000000000000000000000000000000B0b00)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a, account: 0x00000000000000000000000000000000000B0b00, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [592] InheritanceRegistry::DEFAULT_ADMIN_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0000000000000000000000000000000000000000000000000000000000000000
+    Γö£ΓöÇ [50633] InheritanceRegistry::grantRole(0x0000000000000000000000000000000000000000000000000000000000000000, 0x0000000000000000000000000000000000A11ce0)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0000000000000000000000000000000000000000000000000000000000000000, account: 0x0000000000000000000000000000000000A11ce0, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [681] InheritanceRegistry::INHERITANCE_EXECUTOR_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x6c32f2e33afabcaebb914af2630b644b3a8963eef9533b7700a5e1112b2d4695
+    Γö£ΓöÇ [50993] InheritanceRegistry::grantRole(0x6c32f2e33afabcaebb914af2630b644b3a8963eef9533b7700a5e1112b2d4695, 0x00000000000000000000000000000000000E1000)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x6c32f2e33afabcaebb914af2630b644b3a8963eef9533b7700a5e1112b2d4695, account: 0x00000000000000000000000000000000000E1000, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [307] InheritanceRegistry::INHERITANCE_AUTHORITY_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0f6d7ccba0aa2d5f4e57055e84cde6ac914284cdc0b783e30a85a50e5e547511
+    Γö£ΓöÇ [51017] InheritanceRegistry::grantRole(0x0f6d7ccba0aa2d5f4e57055e84cde6ac914284cdc0b783e30a85a50e5e547511, 0x0000000000000000000000000000000000011111)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0f6d7ccba0aa2d5f4e57055e84cde6ac914284cdc0b783e30a85a50e5e547511, account: 0x0000000000000000000000000000000000011111, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [307] InheritanceRegistry::INHERITANCE_AUTHORITY_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0f6d7ccba0aa2d5f4e57055e84cde6ac914284cdc0b783e30a85a50e5e547511
+    Γö£ΓöÇ [51017] InheritanceRegistry::grantRole(0x0f6d7ccba0aa2d5f4e57055e84cde6ac914284cdc0b783e30a85a50e5e547511, 0x0000000000000000000000000000000000022222)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0f6d7ccba0aa2d5f4e57055e84cde6ac914284cdc0b783e30a85a50e5e547511, account: 0x0000000000000000000000000000000000022222, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [307] InheritanceRegistry::INHERITANCE_AUTHORITY_ROLE() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x0f6d7ccba0aa2d5f4e57055e84cde6ac914284cdc0b783e30a85a50e5e547511
+    Γö£ΓöÇ [51017] InheritanceRegistry::grantRole(0x0f6d7ccba0aa2d5f4e57055e84cde6ac914284cdc0b783e30a85a50e5e547511, 0x0000000000000000000000000000000000033333)
+    Γöé   Γö£ΓöÇ emit RoleGranted(role: 0x0f6d7ccba0aa2d5f4e57055e84cde6ac914284cdc0b783e30a85a50e5e547511, account: 0x0000000000000000000000000000000000033333, sender: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    Γöé   ΓööΓöÇ ΓåÉ [Stop]
+    Γö£ΓöÇ [0] VM::stopPrank()
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    ΓööΓöÇ ΓåÉ [Return]
+
+  [35609] PermitTest::test_BC_PERMIT_002_nonAttesterSignerReverts()
+    Γö£ΓöÇ [72] PRECOMPILES::sha256(0x02) [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0xdbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986
+    Γö£ΓöÇ [579] IdentityRegistry::domainSeparator() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x4920c21a3424faa414da6991d17532efcc20ec66a7f8a270df944cf34ac32a08
+    Γö£ΓöÇ [0] VM::sign("<pk>", 0x69972fcdc1224269d71d03d6e7e43c0bac488b9fd0585b2b0c6eca7557e422b1) [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 28, 0x84e623905ac688202b899ca73a38c81505967bd656d92bfce00ade53c6095479, 0x3c7a6d4185ea372c26263a824e62128026db9077e475f87815f173bee3c6604e
+    Γö£ΓöÇ [579] IdentityRegistry::domainSeparator() [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0x4920c21a3424faa414da6991d17532efcc20ec66a7f8a270df944cf34ac32a08
+    Γö£ΓöÇ [0] VM::sign("<pk>", 0x69972fcdc1224269d71d03d6e7e43c0bac488b9fd0585b2b0c6eca7557e422b1) [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 27, 0xd858feec70c482029a973052939df1dbea3529a13d637ed37a56f4b939022e6f, 0x3cc50eb17b9e3830147189650785d618ac4778d8bcb1e49cec919a02fbb947dd
+    Γö£ΓöÇ [0] VM::expectRevert(InvalidPermit())
+    Γöé   ΓööΓöÇ ΓåÉ [Return]
+    Γö£ΓöÇ [72] PRECOMPILES::sha256(0x02) [staticcall]
+    Γöé   ΓööΓöÇ ΓåÉ [Return] 0xdbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986
+    ΓööΓöÇ ΓåÉ [Revert] next call did not revert as expected
+
+Backtrace:
+  at PermitTest.test_BC_PERMIT_002_nonAttesterSignerReverts
+
+Suite result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 7.52ms (1.61ms CPU time)
+
+Ran 1 test suite in 69.39ms (7.52ms CPU time): 0 tests passed, 1 failed, 0 skipped (1 total tests)
+
+Failing tests:
+Encountered 1 failing test in test/Permit.t.sol:PermitTest
+[FAIL: next call did not revert as expected] test_BC_PERMIT_002_nonAttesterSignerReverts() (gas: 35609)
+
+Encountered a total of 1 failing tests, 0 tests succeeded
+
+Tip: Run `forge test --rerun` to retry only the 1 failed test
+Tip: Run `forge test --debug --match-test <TEST_NAME>` to inspect one failing test in the debugger

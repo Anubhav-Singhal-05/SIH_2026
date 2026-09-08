@@ -1,23 +1,56 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Fingerprint, PenLine, ShieldCheck, X } from 'lucide-react'
+import { Fingerprint, PenLine, ShieldCheck, X, Eye, EyeOff, KeyRound, AlertCircle } from 'lucide-react'
 import { useStore } from '../store'
 import { hex, sleep, ERROR_COPY } from '../mock/api'
-import { Badge, Btn, CopyText } from './ui'
+import { Badge, Btn, CopyText, inputCls } from './ui'
 
 // Reusable step-up verification flow: passkey verify, wallet sign with fake
 // calldata preview, confirmation wait, result. Used by every sensitive action.
 export default function StepUpModal({ open, action, onClose, onComplete }) {
   const [phase, setPhase] = useState('passkey')
   const [failCode, setFailCode] = useState(null)
+  const [passkeyInput, setPasskeyInput] = useState('')
+  const [showPasskey, setShowPasskey] = useState(false)
+  const [passkeyError, setPasskeyError] = useState('')
+  const [verifying, setVerifying] = useState(false)
+
+  const session = useStore((s) => s.session)
+  const verifyPasskey = useStore((s) => s.verifyPasskey)
   const injectNext = useStore((s) => s.injectNext)
   const setInjectNext = useStore((s) => s.setInjectNext)
   const calldata = useMemo(() => '0x' + hex(180), [open])
   const txHash = useMemo(() => '0x' + hex(64), [open])
   const permitHash = useMemo(() => '0x' + hex(64), [open])
 
-  useEffect(() => { if (open) { setPhase('passkey'); setFailCode(null) } }, [open])
+  useEffect(() => {
+    if (open) {
+      setPhase('passkey')
+      setFailCode(null)
+      setPasskeyInput('')
+      setPasskeyError('')
+      setVerifying(false)
+    }
+  }, [open])
 
   if (!open) return null
+
+  const handleVerifyPasskey = async () => {
+    if (!passkeyInput.trim()) {
+      setPasskeyError('Please enter your operator passkey.')
+      return
+    }
+    setVerifying(true)
+    setPasskeyError('')
+    await sleep(500)
+    const valid = verifyPasskey(session?.did, passkeyInput.trim())
+    setVerifying(false)
+    if (!valid) {
+      setPasskeyError('Authorization denied: Incorrect operator passkey.')
+      return
+    }
+    setPhase('sign')
+  }
+
   const finish = async () => {
     setPhase('waiting')
     await sleep(1400 + Math.random() * 900)
@@ -47,9 +80,73 @@ export default function StepUpModal({ open, action, onClose, onComplete }) {
           </div>
 
           {phase === 'passkey' && (
-            <div className='space-y-3'>
-              <p className='text-[12px] text-steel-400'>A short-lived, single-use permit is required for this on-chain write. Verify your identity with the device passkey bound to your DID session.</p>
-              <Btn variant='primary' onClick={async () => { setPhase('waiting'); await sleep(900); setPhase('sign') }}><Fingerprint size={13} /> Verify with passkey</Btn>
+            <div className='space-y-3.5'>
+              <div className='inset-panel p-3 text-[11px] font-mono space-y-1 bg-base-950'>
+                <div className='flex justify-between items-center'>
+                  <span className='text-steel-400'>Operator:</span>
+                  <span className='text-steel-200 font-semibold'>{session?.name || 'Authorized Operator'}</span>
+                </div>
+                <div className='flex justify-between items-center'>
+                  <span className='text-steel-400'>DID:</span>
+                  <span className='text-steel-300'>{session?.did ? `${session.did.slice(0, 20)}…${session.did.slice(-8)}` : '-'}</span>
+                </div>
+              </div>
+
+              <p className='text-[12px] text-steel-400 leading-relaxed'>
+                A single-use cryptographic permit is required for this on-chain write. Enter your operator passkey to authorize this transaction.
+              </p>
+
+              <div>
+                <div className='flex items-center justify-between mb-1'>
+                  <span className='label-xs flex items-center gap-1.5'>
+                    <KeyRound size={12} className='text-accent' /> Operator Passkey *
+                  </span>
+                  <span className='text-[10px] font-mono text-steel-500'>
+                    Seed default: <code className='text-accent'>passkey123</code>
+                  </span>
+                </div>
+                <div className='relative'>
+                  <input
+                    type={showPasskey ? 'text' : 'password'}
+                    className={`${inputCls} py-2 font-mono text-[12px] text-steel-200 pr-10`}
+                    placeholder='Enter operator passkey'
+                    value={passkeyInput}
+                    onChange={(e) => {
+                      setPasskeyInput(e.target.value)
+                      setPasskeyError('')
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleVerifyPasskey()
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    type='button'
+                    onClick={() => setShowPasskey(!showPasskey)}
+                    className='absolute right-2.5 top-2.5 text-steel-500 hover:text-steel-300 transition-colors'
+                    title={showPasskey ? 'Hide passkey' : 'Show passkey'}
+                  >
+                    {showPasskey ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {passkeyError && (
+                <div className='p-2.5 bg-bad/10 border border-bad/40 rounded text-[11px] font-mono text-bad flex items-start gap-2'>
+                  <AlertCircle size={14} className='shrink-0 mt-0.5' />
+                  <div className='leading-tight'>{passkeyError}</div>
+                </div>
+              )}
+
+              <Btn
+                variant='primary'
+                className='w-full justify-center py-2'
+                disabled={verifying || !passkeyInput.trim()}
+                onClick={handleVerifyPasskey}
+              >
+                <Fingerprint size={14} />
+                {verifying ? 'Verifying passkey assertion…' : 'Verify Passkey & Authorize'}
+              </Btn>
             </div>
           )}
 

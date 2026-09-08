@@ -1,25 +1,35 @@
+import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { hex64, now } from '../mock/api'
 import { useStore } from '../store'
 import { Badge, Btn, CopyText, KeyRow, Panel, PageHead } from '../components/ui'
 import EncryptUploadProgress from '../components/EncryptUploadProgress'
 import StagedFlow from '../components/StagedFlow'
+import { storeDocument } from '../utils/documentStorage'
 
 export default function UpdateWizard() {
   const { assetId } = useParams()
   const navigate = useNavigate()
-  const asset = useStore((s) => s.assets.find((a) => a.assetId === assetId))
+  const asset = useStore((s) => s.assets.find((a) => String(a.assetId) === String(assetId)))
   const [uploaded, setUploaded] = useState(null)
 
   if (!asset) return <div><PageHead title='Update document' /><p className='font-mono text-[12px] text-steel-600'>&gt; asset not found</p></div>
   const oldHash = asset.documentHash
   const newHash = uploaded ? uploaded.hash : null
+
+  const handleUploadDone = async (u) => {
+    if (u.file) {
+      await storeDocument(asset.assetId, u.file, { name: u.name, contentType: u.contentType })
+    }
+    setUploaded({ ...u, hash: u.checksum || hex64() })
+  }
+
   return (
     <div>
       <PageHead title='Update Document' sub={asset.name + ' / current v' + asset.documentVersion} actions={<Link to={'/assets/' + asset.assetId} className='font-mono text-[10px] text-steel-500 hover:text-steel-200'>&larr; ASSET</Link>} />
       <div className='space-y-3 max-w-[860px]'>
         <Panel title='1-3 / New version: encrypt, stage, checksum'>
-          <EncryptUploadProgress onDone={(u) => setUploaded({ ...u, hash: hex64() })} />
+          <EncryptUploadProgress onDone={handleUploadDone} />
         </Panel>
         {uploaded && (
           <Panel title='Root reference / hash delta'>

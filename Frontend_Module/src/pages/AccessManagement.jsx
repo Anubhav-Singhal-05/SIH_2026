@@ -15,6 +15,7 @@ function GrantOpLine({ id }) { const op = useOp(id); return op ? <div className=
 export default function AccessManagement() {
   const { assetId } = useParams()
   const session = useStore((s) => s.session)
+  const identities = useStore((s) => s.identities)
   const assets = useStore((s) => s.assets)
   const grants = useStore((s) => s.grants)
   const startOperation = useStore((s) => s.startOperation)
@@ -29,9 +30,31 @@ export default function AccessManagement() {
   const [opId, setOpId] = useState(null)
   const op = useOp(opId)
 
+  const ownedAssets = assets.filter((a) => session?.did && a.ownerDid === session.did)
+  const sharedGrants = grants.filter((g) => session?.did && g.granteeDid === session.did)
+  const ownedAssetIds = new Set(ownedAssets.map((a) => String(a.assetId)))
+  const sharedAssetIds = new Set(sharedGrants.map((g) => String(g.assetId)))
+  const allUserAssetIds = new Set([...ownedAssetIds, ...sharedAssetIds])
+  const accessibleAssets = assets.filter((a) => allUserAssetIds.has(String(a.assetId)))
+
   const rows = grants
-    .filter((g) => scope === 'ALL' || g.assetId === scope)
-    .map((g) => { const a = assets.find((x) => x.assetId === g.assetId); const expired = g.status === 'ACTIVE' && g.expiresAt < now(); return { ...g, assetName: a ? a.name : '?', display: g.status !== 'ACTIVE' ? g.status : expired ? 'EXPIRED' : 'ACTIVE' } })
+    .filter((g) => {
+      // Strictly linked to current session identity (owned asset or grantee)
+      const isLinked = (session?.did && g.granteeDid === session.did) || ownedAssetIds.has(String(g.assetId))
+      if (!isLinked) return false
+      if (scope !== 'ALL' && String(g.assetId) !== String(scope)) return false
+      return true
+    })
+    .map((g) => {
+      const a = assets.find((x) => String(x.assetId) === String(g.assetId))
+      const expired = g.status === 'ACTIVE' && g.expiresAt < now()
+      return {
+        ...g,
+        assetName: a ? a.name : `Asset #${String(g.assetId).slice(0, 8)}`,
+        display: g.status !== 'ACTIVE' ? g.status : expired ? 'EXPIRED' : 'ACTIVE',
+        isOwner: ownedAssetIds.has(String(g.assetId)),
+      }
+    })
 
   const beginOp = (type, payload, related) => {
     const id = startOperation({ type, label: type + (type === 'grant' ? ' access' : ' access'), relatedId: related, payload })
@@ -50,11 +73,11 @@ export default function AccessManagement() {
         <div className='col-span-3'>
           <Panel pad={false} title='Grants' actions={
             <select className={selectCls + ' w-56 !py-0.5 text-[11px] font-mono'} value={scope} onChange={(e) => setScope(e.target.value)}>
-              <option value='ALL'>ALL ASSETS</option>
-              {assets.map((a) => <option key={a.assetId} value={a.assetId}>{a.name}</option>)}
+              <option value='ALL'>ALL ACCESSIBLE ASSETS</option>
+              {accessibleAssets.map((a) => <option key={a.assetId} value={a.assetId}>{a.name}</option>)}
             </select>
           }>
-            {rows.length === 0 ? <div className='p-3'><EmptyState lines={['no access grants recorded']} /></div> : (
+            {rows.length === 0 ? <div className='p-3'><EmptyState lines={['no access grants recorded for this identity', 'issue a grant on an owned asset to delegate access']} /></div> : (
               <table className='w-full text-[12px]'>
                 <thead><tr className='border-b border-steel-800 text-left'><th className='label-xs px-3 py-2'>Asset</th><th className='label-xs px-3 py-2'>Grantee DID</th><th className='label-xs px-3 py-2'>Perms</th><th className='label-xs px-3 py-2'>Expires</th><th className='label-xs px-3 py-2'>Status</th><th className='label-xs px-3 py-2'></th></tr></thead>
                 <tbody>
@@ -66,7 +89,7 @@ export default function AccessManagement() {
                       <td className='px-3 py-2 font-mono text-[11px] text-steel-500'>{fmtTime(g.expiresAt)}</td>
                       <td className='px-3 py-2'><Badge status={g.display} /></td>
                       <td className='px-3 py-2 text-right pr-3'>
-                        {g.display === 'ACTIVE' && <Btn variant='danger' className='!px-2 !py-0.5' onClick={() => beginOp('revoke', g.id, g.assetId)}><Ban size={11} /> Revoke</Btn>}
+                        {g.display === 'ACTIVE' && g.isOwner && <Btn variant='danger' className='!px-2 !py-0.5' onClick={() => beginOp('revoke', g.id, g.assetId)}><Ban size={11} /> Revoke</Btn>}
                       </td>
                     </tr>
                   ))}
@@ -78,8 +101,28 @@ export default function AccessManagement() {
         <div className='col-span-2 space-y-3'>
           <Panel title='Issue new grant'>
             <div className='space-y-3'>
-              <Field label='Asset'><select className={selectCls} value={gAsset} onChange={(e) => setGAsset(e.target.value)}><option value=''>— select —</option>{assets.filter((a) => a.ownerDid === session.did).map((a) => <option key={a.assetId} value={a.assetId}>{a.name}</option>)}</select></Field>
-              <Field label='Grantee DID'><select className={selectCls} value={gDid} onChange={(e) => setGDid(e.target.value)}><option value=''>— select —</option>{OTHER_DIDS.map((d) => <option key={d} value={d}>{d}</option>)}</select></Field>
+              <Field label='Asset'>
+                <select className={selectCls} value={gAsset} onChange={(e) => setGAsset(e.target.value)} disabled={ownedAssets.length === 0}>
+                  <option value=''>{ownedAssets.length === 0 ? '— no owned assets to grant —' : '— select asset —'}</option>
+                  {ownedAssets.map((a) => <option key={a.assetId} value={a.assetId}>{a.name}</option>)}
+                </select>
+              </Field>
+              <Field label='Grantee DID'>
+                <div className='space-y-1.5'>
+                  <select className={selectCls} value={gDid} onChange={(e) => setGDid(e.target.value)}>
+                    <option value=''>— select grantee identity —</option>
+                    {identities.filter((i) => i.did !== session?.did).map((i) => (
+                      <option key={i.did} value={i.did}>{i.name ? `${i.name} (${i.did.slice(0, 20)}…)` : i.did}</option>
+                    ))}
+                  </select>
+                  <input
+                    className={`${inputCls} text-[11px] font-mono`}
+                    placeholder='Or enter custom DID string'
+                    value={gDid}
+                    onChange={(e) => setGDid(e.target.value)}
+                  />
+                </div>
+              </Field>
               <div>
                 <span className='label-xs block mb-1'>Permissions</span>
                 <div className='flex gap-2'>
@@ -89,7 +132,7 @@ export default function AccessManagement() {
                 </div>
               </div>
               <Field label='Expires at (local time)'><input type='datetime-local' className={inputCls} value={expiry} onChange={(e) => setExpiry(e.target.value)} /></Field>
-              <Btn variant='primary' className='w-full justify-center' disabled={!gAsset || !gDid || perms.length === 0} onClick={submitGrant}><Plus size={12} /> Grant (step-up required)</Btn>
+              <Btn variant='primary' className='w-full justify-center' disabled={!gAsset || !gDid || perms.length === 0 || ownedAssets.length === 0} onClick={submitGrant}><Plus size={12} /> Grant (step-up required)</Btn>
             </div>
             {op && <GrantOpLine id={op.id} />}
           </Panel>

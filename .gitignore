@@ -1,15 +1,34 @@
-# MongoDB Atlas credentials — never commit
+# Dependencies & Package managers
+*/node_modules/
+*/dist/
+
+# Sensitive credentials & environment files (Never commit)
+*.env
+*.pem
+*.key
 atlas-credentials.env
 .atlas-credentials.env
-node_modules/
-*.log
+**/*atlas-credentials.env*
 
-# Python (dummy-data population script)
+# Documentation, specifications, and test case plans
+*.md
+
+# Presentation & Office assets
+*.docx
+*.png
+*.jpg
+*.jpeg
+
+# Python environment & cache
 venv/
 .venv/
 __pycache__/
 *.pyc
-*.env
-!atlas-credentials.env.example
-!.env.example
+*.log
+*testlog.txt
 populate_summary.txt
+
+# Blockchain Foundry compiler & broadcast artifacts
+blockchain-module/cache/
+blockchain-module/out/
+blockchain-module/broadcast/

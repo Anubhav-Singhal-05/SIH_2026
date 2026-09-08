@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useStore } from './store'
 import Shell from './components/Layout'
 import { ErrorBanner } from './components/Banners'
+import ErrorBoundary from './components/ErrorBoundary'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
@@ -25,7 +26,7 @@ function Protected({ children }) {
 
 export default function App() {
   return (
-    <>
+    <ErrorBoundary>
       <ErrorBanner />
       <Routes>
         <Route path='/login' element={<Login />} />
@@ -45,6 +46,6 @@ export default function App() {
         <Route path='/audit' element={<Protected><Shell><AuditLog /></Shell></Protected>} />
         <Route path='*' element={<Navigate to='/dashboard' replace />} />
       </Routes>
-    </>
+    </ErrorBoundary>
   )
 }

@@ -5,6 +5,7 @@ import { useStore } from '../store'
 import { Badge, Btn, CopyText, KeyRow, Panel, PageHead, Stepper } from '../components/ui'
 import EncryptUploadProgress from '../components/EncryptUploadProgress'
 import StagedFlow from '../components/StagedFlow'
+import { storeDocument } from '../utils/documentStorage'
 
 // 8-step wizard: select+encrypt, stage, checksum, mint intent, step-up,
 // signature, confirmation polling, success.
@@ -13,32 +14,62 @@ const STEPS = ['SELECT + ENCRYPT', 'STAGE + UPLOAD', 'CHECKSUM FINALIZE', 'MINT 
 export default function UploadWizard() {
   const navigate = useNavigate()
   const session = useStore((s) => s.session)
-  const identity = useStore((s) => s.identities.find((i) => i.did === s.session.did))
+  const identity = useStore((s) => s.identities.find((i) => i.did === (s.session ? s.session.did : null)))
   const [staged, setStaged] = useState(null)
   const [intent, setIntent] = useState(null)
   const [step, setStep] = useState(0) // highest visible step index
 
   const markDone = (idx) => setStep((s) => Math.max(s, idx))
 
-  const onUploadDone = async ({ name, size, checksum }) => {
-    setStaged({ name, size, checksum, stagedId: uuid() })
+  const onUploadDone = async ({ name, size, contentType, checksum, dataUrl, textContent, file }) => {
+    const stagedId = uuid()
+    const stagedObj = {
+      stagedId,
+      name,
+      size,
+      contentType,
+      checksum,
+      dataUrl,
+      textContent,
+      file,
+    }
+    setStaged(stagedObj)
     markDone(2)
-    const it = await api.createMintIntent({ callerDid: session.did, ownerDid: session.did, stagedId: staged ? staged.stagedId : uuid(), verified: false, rootVersion: identity.rootVersion })
+
+    if (file) {
+      await storeDocument(stagedId, file, { name, contentType })
+    }
+
+    const it = await api.createMintIntent({
+      callerDid: session.did,
+      ownerDid: session.did,
+      stagedId: stagedObj.stagedId,
+      verified: false,
+      rootVersion: identity ? identity.rootVersion : 1,
+    })
     setIntent(it)
+
+    if (file && it?.assetId) {
+      await storeDocument(String(it.assetId), file, { name, contentType })
+    }
+
     markDone(3)
   }
-  const newAsset = intent ? {
-    assetId: intent.assetId,
-    name: staged ? staged.name : 'document.pdf',
-    contentType: 'application/pdf',
+  const newAsset = intent && staged ? {
+    assetId: String(intent.assetId),
+    name: staged.name || 'document.pdf',
+    contentType: staged.contentType || 'application/pdf',
+    sizeBytes: staged.size || 0,
     ownerDid: session.did,
     documentVersion: 1,
-    status: 'STAGED',
-    documentHash: hex64(),
+    status: 'CONFIRMED',
+    documentHash: staged.checksum || hex64(),
     createdAt: now(),
     updatedAt: now(),
-    versions: [{ version: 1, hash: hex64(), note: 'initial mint', at: now() }],
-    integrity: 'PENDING',
+    dataUrl: staged.dataUrl || null,
+    textContent: staged.textContent || null,
+    versions: [{ version: 1, hash: staged.checksum || hex64(), note: 'Initial registered version', at: now() }],
+    integrity: 'VERIFIED',
   } : null
 
   return (
@@ -71,7 +102,12 @@ export default function UploadWizard() {
             relatedId={intent.assetId}
             payload={newAsset}
             hint='step-up and signature outstanding'
-            onConfirmed={() => markDone(7)}
+            onConfirmed={() => {
+              if (staged?.file && intent?.assetId) {
+                storeDocument(String(intent.assetId), staged.file, { name: staged.name, contentType: staged.contentType })
+              }
+              markDone(7)
+            }}
           />
         )}
         {step >= 7 && newAsset && (

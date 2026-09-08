@@ -1,0 +1,757 @@
+openapi: 3.1.0
+info:
+  title: Blockchain Identity, Access, and Asset Platform — Backend API
+  version: 1.0.0
+  description: |
+    Backend API for DID identity, encrypted document assets, access control,
+    transfer, and step-up-permit-protected chain operations.
+
+    Conventions:
+    - All errors use stable codes (UNAUTHENTICATED, FORBIDDEN, INVALID_REQUEST,
+      IDEMPOTENCY_CONFLICT, STALE_ROOT, PERMIT_EXPIRED, WRONG_NETWORK,
+      CHAIN_UNAVAILABLE, CONTRACT_REVERTED, STORAGE_FINALIZATION_FAILED,
+      DOCUMENT_NOT_READY, REORG_IN_PROGRESS, RATE_LIMITED, INTERNAL_ERROR).
+    - Every response carries an `x-request-id` header (BE-PIPE-002).
+    - Every mutating endpoint requires an `Idempotency-Key` (UUIDv7) header and
+      writes an audit record (BE-PIPE-007/012).
+    - The backend never returns plaintext documents, keys, salts, or raw
+      storage object references (BE-DOD-004).
+servers:
+  - url: http://127.0.0.1:3000
+    description: Local development
+tags:
+  - name: health
+  - name: auth
+  - name: assets
+  - name: audit
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Service health and configured chain ID
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, chainId]
+                properties:
+                  status: { type: string, const: ok }
+                  chainId: { type: integer, example: 31337 }
+
+  /auth/challenge:
+    post:
+      tags: [auth]
+      summary: Create a WebAuthn challenge (single-use, expiring)
+      operationId: createAuthChallenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [did]
+              properties:
+                did: { $ref: '#/components/schemas/Did' }
+      responses:
+        '200':
+          description: Challenge created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [challenge]
+                properties:
+                  challenge:
+                    type: string
+                    description: Base64url, cryptographically random, single-use, 60s expiry
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+
+  /auth/assertion:
+    post:
+      tags: [auth]
+      summary: Verify a WebAuthn assertion and issue session tokens
+      operationId: verifyAssertion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challenge, assertion]
+              properties:
+                challenge: { type: string }
+                assertion: { $ref: '#/components/schemas/WebAuthnAssertion' }
+      responses:
+        '200':
+          description: Session tokens issued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokens' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate the refresh token (old token becomes invalid; reuse revokes the family)
+      operationId: rotateRefresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: Rotated session tokens
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokens' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Invalidate the refresh token / current session
+      operationId: logout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, const: true }
+
+  /assets/upload-intent:
+    post:
+      tags: [assets]
+      summary: Create a scoped one-time upload destination for client-encrypted ciphertext
+      operationId: createUploadIntent
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contentType, sizeBytes]
+              properties:
+                contentType:
+                  type: string
+                  description: Must be on the configured MIME allowlist
+                  example: application/pdf
+                sizeBytes:
+                  type: integer
+                  format: int64
+                  minimum: 1
+                  description: Must not exceed the configured upload size policy
+      responses:
+        '200':
+          description: Upload intent created; object is STAGED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadIntent' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/DocumentNotReady' }
+
+  /assets/finalize:
+    post:
+      tags: [assets]
+      summary: Finalize a staged object by verifying ciphertext checksum and byte count only
+      operationId: finalizeUpload
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stagedId, expectedChecksumSha256, expectedByteSize]
+              properties:
+                stagedId: { type: string, format: uuid }
+                expectedChecksumSha256:
+                  type: string
+                  pattern: '^[0-9a-f]{64}$'
+                expectedByteSize: { type: integer, format: int64, minimum: 1 }
+      responses:
+        '200':
+          description: Checksum and byte size verified; object remains STAGED until chain confirmation
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stagedId, status]
+                properties:
+                  stagedId: { type: string, format: uuid }
+                  status: { type: string, enum: [STAGED] }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/DocumentNotReady' }
+        '422': { $ref: '#/components/responses/StorageFinalizationFailed' }
+
+  /assets/mint-intent:
+    post:
+      tags: [assets]
+      summary: |
+        Create a mint intent: validates issuer role, active owner DID, staged
+        document; reads the owner root/version directly from chain; reserves a
+        random 128-bit asset ID; returns step-up-permit-bound AssetRegistry
+        calldata for wallet submission.
+      operationId: createMintIntent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [callerDid, ownerDid, stagedId, issuerRole, verified]
+              properties:
+                callerDid: { $ref: '#/components/schemas/Did' }
+                ownerDid: { $ref: '#/components/schemas/Did' }
+                stagedId: { type: string, format: uuid }
+                issuerRole:
+                  type: boolean
+                  description: Caller holds ASSET_ISSUER_ROLE (chain-verified)
+                verified:
+                  type: boolean
+                  description: WebAuthn user-verification completed for this operation
+      responses:
+        '200':
+          description: >
+            Mint intent created. When `verified` is false the operation is
+            AWAITING_STEP_UP and `permit.signature` is empty; calldata is
+            returned only after verification (BE-MINT-015).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MintIntent' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/DocumentNotReady' }
+        '409':
+          description: IDEMPOTENCY_CONFLICT or STALE_ROOT
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ChainUnavailable' }
+
+  /identities/{did}/resolve:
+    get:
+      tags: [identities]
+      summary: Resolve identity projection by DID
+      operationId: resolveIdentity
+      parameters:
+        - name: did
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/Did' }
+      responses:
+        '200':
+          description: Identity projection
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Identity' }
+        '404': { $ref: '#/components/responses/DocumentNotReady' }
+
+  /assets:
+    get:
+      tags: [assets]
+      summary: List authorized assets for an owner (cursor-paginated)
+      operationId: listAssets
+      parameters:
+        - name: ownerDidHash
+          in: query
+          schema: { type: string, pattern: '^0x[0-9a-f]{64}$' }
+        - name: status
+          in: query
+          schema: { type: string, enum: [ACTIVE, DEACTIVATED] }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: cursor
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated asset list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Asset' }
+                  nextCursor: { type: string, nullable: true }
+                  hasMore: { type: boolean }
+
+  /assets/{assetId}:
+    get:
+      tags: [assets]
+      summary: Get asset details and version history
+      operationId: getAsset
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Asset detail
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [asset, versions]
+                properties:
+                  asset: { $ref: '#/components/schemas/Asset' }
+                  versions: { type: array }
+        '404': { $ref: '#/components/responses/DocumentNotReady' }
+
+  /assets/{assetId}/history:
+    get:
+      tags: [assets]
+      summary: Get ownership history for an asset
+      operationId: getAssetHistory
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Ownership history events
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [assetId, items]
+                properties:
+                  assetId: { type: string }
+                  items: { type: array }
+
+  /assets/{assetId}/transfer-intent:
+    post:
+      tags: [assets]
+      summary: Create an atomic transfer intent with EIP-712 step-up permit
+      operationId: createTransferIntent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [callerDid, toDid, verified]
+              properties:
+                callerDid: { $ref: '#/components/schemas/Did' }
+                toDid: { $ref: '#/components/schemas/Did' }
+                verified: { type: boolean }
+      responses:
+        '200':
+          description: Signed transfer calldata and permit
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransferIntent' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /assets/{assetId}/access-grant-intent:
+    post:
+      tags: [assets]
+      summary: Create an access grant intent with EIP-712 step-up permit
+      operationId: createAccessGrantIntent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [callerDid, granteeDid, permissionMask, verified]
+              properties:
+                callerDid: { $ref: '#/components/schemas/Did' }
+                granteeDid: { $ref: '#/components/schemas/Did' }
+                permissionMask: { type: integer, description: 'Bitmask: READ=1, SHARE=8, VERIFY=16' }
+                expiresAtSeconds: { type: integer }
+                verified: { type: boolean }
+      responses:
+        '200':
+          description: Signed access grant calldata and permit
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccessIntent' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /assets/{assetId}/access-revoke-intent:
+    post:
+      tags: [assets]
+      summary: Create an access revoke intent with EIP-712 step-up permit
+      operationId: createAccessRevokeIntent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [callerDid, granteeDid, verified]
+              properties:
+                callerDid: { $ref: '#/components/schemas/Did' }
+                granteeDid: { $ref: '#/components/schemas/Did' }
+                verified: { type: boolean }
+      responses:
+        '200':
+          description: Signed access revoke calldata and permit
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccessIntent' }
+
+  /assets/{assetId}/document-update-intent:
+    post:
+      tags: [assets]
+      summary: Create a document update intent
+      operationId: createDocumentUpdateIntent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [callerDid, stagedId, verified]
+              properties:
+                callerDid: { $ref: '#/components/schemas/Did' }
+                stagedId: { type: string, format: uuid }
+                expectedDocumentHash: { type: string }
+                verified: { type: boolean }
+      responses:
+        '200':
+          description: Document update calldata and permit
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UpdateIntent' }
+
+  /assets/{assetId}/deactivate-intent:
+    post:
+      tags: [assets]
+      summary: Create an asset deactivation intent
+      operationId: createDeactivateIntent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [callerDid, verified]
+              properties:
+                callerDid: { $ref: '#/components/schemas/Did' }
+                verified: { type: boolean }
+      responses:
+        '200':
+          description: Deactivation calldata and permit
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeactivateIntent' }
+
+  /verification/documents:
+    post:
+      tags: [verification]
+      summary: Verify document plaintext/salted hash against confirmed version
+      operationId: verifyDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assetId, documentHash]
+              properties:
+                assetId: { type: string }
+                documentHash: { type: string, pattern: '^0x[0-9a-f]{64}$' }
+      responses:
+        '200':
+          description: Verification outcome
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [verified, assetId, documentHash]
+                properties:
+                  verified: { type: boolean }
+                  assetId: { type: string }
+                  documentHash: { type: string }
+                  recordedDocumentHash: { type: string }
+                  version: { type: integer }
+
+  /verification/merkle-proofs:
+    get:
+      tags: [verification]
+      summary: Query historical or current Merkle proof for an asset
+      operationId: getMerkleProof
+      parameters:
+        - name: didHash
+          in: query
+          required: true
+          schema: { type: string, pattern: '^0x[0-9a-f]{64}$' }
+        - name: assetId
+          in: query
+          required: true
+          schema: { type: string }
+        - name: rootVersion
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Self-verified proof
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [algorithm, didHash, root, assetId, leaf, verified]
+                properties:
+                  algorithm: { type: string }
+                  didHash: { type: string }
+                  root: { type: string }
+                  rootVersion: { type: integer }
+                  assetId: { type: string }
+                  leaf: { type: string }
+                  ordinal: { type: integer }
+                  siblings: { type: array }
+                  verified: { type: boolean }
+
+  /audit:
+    get:
+      tags: [audit]
+      summary: List audit events (filterable)
+      operationId: listAuditEvents
+      parameters:
+        - name: actorDidHash
+          in: query
+          schema: { type: string, pattern: '^0x[0-9a-f]{64}$' }
+        - name: action
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events]
+                properties:
+                  events:
+                    type: array
+                    items: { $ref: '#/components/schemas/AuditEvent' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Access token from /auth/assertion (15-minute TTL)
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+      description: >
+        UUIDv7 idempotency key. Same key + same request digest replays the
+        original response; same key + different digest returns 409
+        IDEMPOTENCY_CONFLICT.
+
+  schemas:
+    Did:
+      type: string
+      pattern: '^did:[a-z0-9]+:[a-z0-9._%-]+$'
+      example: did:platform:alice
+
+    Hex32:
+      type: string
+      pattern: '^0x[0-9a-f]{64}$'
+
+    WebAuthnAssertion:
+      type: object
+      required: [credentialId, signatureOk, counter]
+      properties:
+        credentialId: { type: string }
+        signatureOk: { type: boolean }
+        counter: { type: integer, minimum: 0 }
+
+    AuthTokens:
+      type: object
+      required: [accessToken, refreshToken, expiresIn]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        expiresIn:
+          type: integer
+          description: Access token TTL in seconds (900 = 15 minutes)
+          example: 900
+
+    UploadIntent:
+      type: object
+      required: [stagedId, uploadUrl, objectKey, expiresAt]
+      properties:
+        stagedId: { type: string, format: uuid }
+        uploadUrl:
+          type: string
+          description: One-time scoped destination; never a public URL
+        objectKey:
+          type: string
+          description: Server-chosen opaque key (BE-STORAGE-002)
+        expiresAt: { type: string, format: date-time }
+
+    StepUpPermit:
+      type: object
+      description: EIP-712 permit signed by the STEP_UP_ATTESTER (HSM); signature empty until user verification
+      required: [operationHash, didHash, expiresAt, nonce, signature]
+      properties:
+        operationHash: { $ref: '#/components/schemas/Hex32' }
+        didHash: { $ref: '#/components/schemas/Hex32' }
+        expiresAt: { type: integer, format: int64 }
+        nonce: { type: integer }
+        signature: { type: string }
+
+    MintIntent:
+      type: object
+      required: [operationId, assetId, calldata, target, permit]
+      properties:
+        operationId: { type: string, format: uuid }
+        assetId:
+          type: string
+          description: Random 128-bit asset ID (decimal string of uint256)
+        calldata:
+          type: string
+          description: AssetRegistry.registerAsset calldata; '0x' until verified
+        target:
+          type: string
+          description: AssetRegistry contract address
+        permit: { $ref: '#/components/schemas/StepUpPermit' }
+
+    AuditEvent:
+      type: object
+      required: [id, actorDidHash, action, target, result, at]
+      properties:
+        id: { type: string, format: uuid }
+        actorDidHash: { $ref: '#/components/schemas/Hex32' }
+        action: { type: string, example: mint_intent }
+        target: { type: string }
+        requestId: { type: string }
+        operationId: { type: string, format: uuid }
+        result: { type: string, enum: [success, failure] }
+        at: { type: integer, format: int64 }
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - UNAUTHENTICATED
+            - FORBIDDEN
+            - INVALID_REQUEST
+            - IDEMPOTENCY_CONFLICT
+            - STALE_ROOT
+            - PERMIT_EXPIRED
+            - WRONG_NETWORK
+            - CHAIN_UNAVAILABLE
+            - CONTRACT_REVERTED
+            - STORAGE_FINALIZATION_FAILED
+            - DOCUMENT_NOT_READY
+            - REORG_IN_PROGRESS
+            - RATE_LIMITED
+            - INTERNAL_ERROR
+        message: { type: string }
+        details: { type: object, additionalProperties: true }
+        requestId: { type: string }
+
+  responses:
+    InvalidRequest:
+      description: INVALID_REQUEST — validation or policy failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthenticated:
+      description: UNAUTHENTICATED — missing/expired/invalid session
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: FORBIDDEN — role/ownership/active-state failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    DocumentNotReady:
+      description: DOCUMENT_NOT_READY — unknown identity/asset/staged object
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    StorageFinalizationFailed:
+      description: STORAGE_FINALIZATION_FAILED — checksum or byte-size mismatch
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ChainUnavailable:
+      description: CHAIN_UNAVAILABLE — all providers unreachable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
