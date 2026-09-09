@@ -40,15 +40,33 @@ export default function Dashboard() {
     return false
   })
 
+  const ACTION_LABELS = {
+    mint_intent: 'Document Registration',
+    mint_confirmed: 'Registered On-Chain',
+    document_update: 'Document Updated',
+    transfer: 'Ownership Transferred',
+    transfer_intent: 'Transfer Initiated',
+    transfer_confirmed: 'Ownership Transferred',
+    grant_created: 'Access Granted',
+    grant_intent: 'Access Grant',
+    grant_revoked: 'Access Revoked',
+    controller_rotated: 'Security Key Rotated',
+    inheritance_configured: 'Inheritance Saved',
+    inheritance_config: 'Inheritance Saved',
+    inheritance_activate: 'Inheritance Activated',
+    chain_reorg: 'Blockchain Reorg',
+    asset_deactivated: 'Document Deactivated',
+  }
+
   const stats = [
-    { icon: Activity, label: 'DID STATUS', value: identity ? identity.status : '-', badge: identity && identity.status },
-    { icon: GitBranch, label: 'CURRENT ROOT', value: identity ? 'v' + identity.rootVersion : '-' },
-    { icon: Boxes, label: 'OWNED ASSETS', value: String(owned.length) },
+    { icon: Activity, label: 'ACCOUNT STATUS', value: identity ? identity.status : '-', badge: identity && identity.status },
+    { icon: GitBranch, label: 'SECURITY STATE', value: identity ? 'State v' + identity.rootVersion : '-' },
+    { icon: Boxes, label: 'MY DOCUMENTS', value: String(owned.length) },
     { icon: Share2, label: 'SHARED WITH ME', value: String(shared.length) },
   ]
   return (
     <div>
-      <PageHead title='Dashboard' sub={'overview / ' + (session?.did || 'did:platform:alcott.main')} actions={<Link to='/assets/upload'><Btn variant='primary'><Plus size={12} /> Mint asset</Btn></Link>} />
+      <PageHead title='Dashboard' sub={'Account Overview / ' + (identity?.name ? `${identity.name} (${session?.did?.slice(0, 18)}…)` : (session?.did || 'My Identity'))} actions={<Link to='/assets/upload'><Btn variant='primary'><Plus size={12} /> Add Document</Btn></Link>} />
       <div className='grid grid-cols-4 gap-3 mb-4'>
         {stats.map((s) => (
           <div key={s.label} className='panel px-3 py-2.5'>
@@ -59,17 +77,17 @@ export default function Dashboard() {
       </div>
       <div className='grid grid-cols-5 gap-3'>
         <div className='col-span-3 space-y-3'>
-          <Panel title='In-progress operations' actions={<Link to='/audit' className='font-mono text-[10px] text-accent hover:text-accent-bright'>AUDIT LOG</Link>} pad={false}>
+          <Panel title='In-progress operations' actions={<Link to='/audit' className='font-mono text-[10px] text-accent hover:text-accent-bright'>ACTIVITY LOG →</Link>} pad={false}>
             {opOrder.length === 0 ? (
-              <div className='p-3'><EmptyState lines={['no operations in this session', 'trigger a mint, update, transfer or grant to observe the staged lifecycle here']} /></div>
+              <div className='p-3'><EmptyState lines={['No operations currently in progress', 'Adding a document, updating, transferring or granting access will appear here']} /></div>
             ) : (
               <div className='divide-y divide-steel-900'>{opOrder.map((id) => <OpCard key={id} id={id} />)}</div>
             )}
           </Panel>
-          <Panel title='Recent audit events' pad={false}>
+          <Panel title='Recent activity' pad={false}>
             {userAudits.length === 0 ? (
               <div className='p-3'>
-                <EmptyState lines={['no audit events recorded for this identity yet', 'mint an asset or execute an operation to generate audit trails']} />
+                <EmptyState lines={['No activity recorded for this account yet', 'Actions performed by you will appear here as verified audit records']} />
               </div>
             ) : (
               <table className='w-full text-[12px]'>
@@ -77,7 +95,7 @@ export default function Dashboard() {
                   {userAudits.slice(0, 8).map((a) => (
                     <tr key={a.id} className='border-b border-steel-900 last:border-b-0'>
                       <td className='px-3 py-1.5 font-mono text-[11px] text-steel-400'>{fmtTime(a.at)}</td>
-                      <td className='px-3 py-1.5 font-mono text-[11px] text-steel-200'>{a.action}</td>
+                      <td className='px-3 py-1.5 text-steel-200 font-medium text-[11px]'>{ACTION_LABELS[a.action] || a.action}</td>
                       <td className='px-3 py-1.5'><CopyText value={a.target} /></td>
                       <td className='px-3 py-1.5 text-right pr-3'><span className={a.result === 'success' ? 'font-mono text-[10px] text-ok' : 'font-mono text-[10px] text-bad'}>{a.result.toUpperCase()}</span></td>
                     </tr>

@@ -107,21 +107,13 @@ export default function AccessManagement() {
                   {ownedAssets.map((a) => <option key={a.assetId} value={a.assetId}>{a.name}</option>)}
                 </select>
               </Field>
-              <Field label='Grantee DID'>
-                <div className='space-y-1.5'>
-                  <select className={selectCls} value={gDid} onChange={(e) => setGDid(e.target.value)}>
-                    <option value=''>— select grantee identity —</option>
-                    {identities.filter((i) => i.did !== session?.did).map((i) => (
-                      <option key={i.did} value={i.did}>{i.name ? `${i.name} (${i.did.slice(0, 20)}…)` : i.did}</option>
-                    ))}
-                  </select>
-                  <input
-                    className={`${inputCls} text-[11px] font-mono`}
-                    placeholder='Or enter custom DID string'
-                    value={gDid}
-                    onChange={(e) => setGDid(e.target.value)}
-                  />
-                </div>
+              <Field label='Recipient User Name / ID'>
+                <input
+                  className={`${inputCls} text-[12px] font-mono`}
+                  placeholder='Enter username or DID of recipient (e.g. Anubha or did:sih:...)'
+                  value={gDid}
+                  onChange={(e) => setGDid(e.target.value)}
+                />
               </Field>
               <div>
                 <span className='label-xs block mb-1'>Permissions</span>

@@ -34,21 +34,21 @@ export default function Identity() {
 
   return (
     <div>
-      <PageHead title='My Identity' sub='decentralized identifier detail and root lineage' />
+      <PageHead title='My Identity' sub='Your verifiable digital ID profile and security version history' />
       <div className='grid grid-cols-5 gap-3'>
         <div className='col-span-3 space-y-3'>
-          <Panel title='DID record' actions={identity && <Badge status={identity.status} />}>
-            <KeyRow k='DID'><CopyText value={session.did} full /></KeyRow>
-            <KeyRow k='Controller address'><CopyText value={identity ? identity.controllerAddress : ''} /></KeyRow>
-            <KeyRow k='Encryption key fingerprint'><CopyText value={identity ? identity.encryptionKeyFingerprint : ''} /></KeyRow>
-            <KeyRow k='Root version'><span className='font-mono'>v{identity ? identity.rootVersion : '-'}</span></KeyRow>
+          <Panel title='Digital Identity Profile' actions={identity && <Badge status={identity.status} />}>
+            <KeyRow k='User Identity (DID)'><CopyText value={session.did} full /></KeyRow>
+            <KeyRow k='Wallet / Controller Address'><CopyText value={identity ? identity.controllerAddress : ''} /></KeyRow>
+            <KeyRow k='Passkey Security Fingerprint'><CopyText value={identity ? identity.encryptionKeyFingerprint : ''} /></KeyRow>
+            <KeyRow k='Security State Version'><span className='font-mono'>v{identity ? identity.rootVersion : '-'}</span></KeyRow>
           </Panel>
-          <Panel title='Root version history' pad={false}>
+          <Panel title='Security Version & State History' pad={false}>
             <table className='w-full text-[12px]'>
               <thead>
                 <tr className='border-b border-steel-800 text-left'>
                   <th className='label-xs px-3 py-2'>Version</th>
-                  <th className='label-xs px-3 py-2'>Root hash</th>
+                  <th className='label-xs px-3 py-2'>Security Integrity Seal</th>
                   <th className='label-xs px-3 py-2'>Action</th>
                   <th className='label-xs px-3 py-2'>Timestamp</th>
                 </tr>

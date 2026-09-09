@@ -407,8 +407,8 @@ export async function createServer(overrides = {}) {
 
 export async function startServer() {
   const { app, config } = await createServer();
-  await app.listen({ port: config.port, host: '127.0.0.1' });
-  console.log(`backend listening on http://127.0.0.1:${config.port}`);
+  await app.listen({ port: config.port, host: config.host });
+  console.log(`backend listening on http://${config.host}:${config.port}`);
   return app;
 }
 

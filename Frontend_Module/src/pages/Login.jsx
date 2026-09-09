@@ -1,36 +1,30 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Fingerprint, ArrowRight, Eye, EyeOff, AlertCircle, KeyRound } from 'lucide-react'
+import { Fingerprint, ArrowRight, Eye, EyeOff, AlertCircle, KeyRound, UserCheck } from 'lucide-react'
 import { useStore } from '../store'
-import { selectCls, inputCls, Badge } from '../components/ui'
+import { inputCls } from '../components/ui'
 
 export default function Login() {
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
+  const [didInput, setDidInput] = useState('')
   const [passkey, setPasskey] = useState('')
   const [showPasskey, setShowPasskey] = useState(false)
   const [error, setError] = useState('')
 
-  const identities = useStore((s) => s.identities)
   const login = useStore((s) => s.login)
   const session = useStore((s) => s.session)
   const navigate = useNavigate()
-
-  const [selectedDid, setSelectedDid] = useState(identities[0]?.did || '')
-  const [isManual, setIsManual] = useState(false)
-  const [manualDid, setManualDid] = useState('')
 
   if (session) {
     navigate('/dashboard')
     return null
   }
 
-  const effectiveDid = isManual ? manualDid.trim() : selectedDid
-  const currentIdentity = identities.find((i) => i.did === effectiveDid)
-
   const go = async () => {
-    if (!effectiveDid) {
-      setError('Please select or specify a DID identity.')
+    const trimmedDid = didInput.trim()
+    if (!trimmedDid) {
+      setError('Please enter your DID identity or username.')
       return
     }
     if (!passkey.trim()) {
@@ -42,18 +36,18 @@ export default function Login() {
     setBusy(true)
 
     try {
-      setStatus('requesting challenge for ' + (effectiveDid.slice(0, 16) + '…'))
+      setStatus('requesting challenge for ' + (trimmedDid.slice(0, 18) + '…'))
       await new Promise((r) => setTimeout(r, 450))
       setStatus('verifying client passkey assertion…')
       await new Promise((r) => setTimeout(r, 550))
-      setStatus('issuing session token & loading read models…')
-      await login(effectiveDid, passkey.trim())
+      setStatus('issuing session token & loading credentials…')
+      await login(trimmedDid, passkey.trim())
       navigate('/dashboard')
     } catch (err) {
       setBusy(false)
       setStatus('')
       if (err.message === 'INCORRECT_PASSKEY') {
-        setError('Authentication rejected: Incorrect passkey for this identity. (Default seed passkey: passkey123)')
+        setError('Authentication rejected: Incorrect passkey for this identity.')
       } else {
         setError(err.message || 'Authentication failed. Please verify your credentials.')
       }
@@ -76,81 +70,32 @@ export default function Login() {
         <div className='panel p-0 overflow-hidden shadow-2xl border-steel-800'>
           <div className='px-6 py-5 border-b border-steel-800/80 bg-base-900/50'>
             <h1 className='text-[13px] font-semibold text-steel-100 tracking-wider uppercase mb-1'>Operator Sign-In</h1>
-            <p className='text-[12px] text-steel-400'>Select your DID identity and enter your operator passkey to authenticate.</p>
+            <p className='text-[12px] text-steel-400'>Enter your DID identity and operator passkey to authenticate.</p>
           </div>
 
           <div className='p-6 space-y-4'>
-            {/* Identity Selector */}
+            {/* Identity Input */}
             <div>
-              <div className='flex items-center justify-between mb-1.5'>
-                <span className='label-xs'>Select Identity to Sign In</span>
-                <button
-                  type='button'
-                  onClick={() => {
-                    setIsManual(!isManual)
-                    setError('')
-                  }}
-                  className='text-[10px] font-mono text-accent hover:text-accent-bright transition-colors'
-                >
-                  {isManual ? '← Choose from registered list' : '+ Enter custom DID manually'}
-                </button>
-              </div>
-
-              {!isManual ? (
-                <div className='space-y-2'>
-                  <select
-                    className={`${selectCls} py-2 font-mono text-[12px] text-steel-200 bg-base-900`}
-                    value={selectedDid}
-                    onChange={(e) => {
-                      setSelectedDid(e.target.value)
-                      setError('')
-                    }}
-                  >
-                    {identities.map((id) => (
-                      <option key={id.did} value={id.did}>
-                        {id.name ? `${id.name} (${id.did.slice(0, 22)}…)` : id.did}
-                      </option>
-                    ))}
-                  </select>
-
-                  {currentIdentity && (
-                    <div className='inset-panel p-3 text-[11px] font-mono space-y-1 bg-base-900/60'>
-                      <div className='flex justify-between items-center'>
-                        <span className='text-steel-400'>Name:</span>
-                        <span className='text-steel-200 font-semibold'>{currentIdentity.name || 'Default Operator'}</span>
-                      </div>
-                      <div className='flex justify-between items-center'>
-                        <span className='text-steel-400'>Controller:</span>
-                        <span className='text-steel-300'>{currentIdentity.controllerAddress ? `${currentIdentity.controllerAddress.slice(0, 10)}…${currentIdentity.controllerAddress.slice(-6)}` : '-'}</span>
-                      </div>
-                      <div className='flex justify-between items-center'>
-                        <span className='text-steel-400'>Root Version:</span>
-                        <span className='text-accent'>v{currentIdentity.rootVersion || 1}</span>
-                      </div>
-                      <div className='flex justify-between items-center pt-0.5'>
-                        <span className='text-steel-400'>Status:</span>
-                        <Badge status={currentIdentity.status || 'ACTIVE'} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className='space-y-2'>
-                  <input
-                    className={`${inputCls} py-2 font-mono text-[12px] text-steel-200`}
-                    placeholder='e.g. did:sih:my.custom.did'
-                    value={manualDid}
-                    onChange={(e) => {
-                      setManualDid(e.target.value)
-                      setError('')
-                    }}
-                    autoFocus
-                  />
-                  <p className='text-[11px] text-steel-500 font-mono'>
-                    Paste any DID registered on-chain or in your local environment.
-                  </p>
-                </div>
-              )}
+              <label className='label-xs flex items-center gap-1.5 mb-1.5'>
+                <UserCheck size={12} className='text-accent' /> DID Identity or Username *
+              </label>
+              <input
+                type='text'
+                className={`${inputCls} py-2 font-mono text-[12px] text-steel-200`}
+                placeholder='e.g. did:sih:... or your registered username'
+                value={didInput}
+                onChange={(e) => {
+                  setDidInput(e.target.value)
+                  setError('')
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') go()
+                }}
+                autoFocus
+              />
+              <p className='text-[11px] text-steel-500 font-mono mt-1'>
+                Enter your private Decentralized Identifier (DID) or registered username.
+              </p>
             </div>
 
             {/* Passkey Input */}
@@ -198,7 +143,7 @@ export default function Login() {
 
             <button
               onClick={go}
-              disabled={busy || !effectiveDid || !passkey.trim()}
+              disabled={busy || !didInput.trim() || !passkey.trim()}
               className='w-full btn-base bg-accent border-accent text-base-950 hover:bg-accent-bright font-semibold justify-center py-2.5 disabled:opacity-40 transition-all shadow-md hover:shadow-glow'
             >
               <Fingerprint size={16} />

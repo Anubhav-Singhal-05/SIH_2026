@@ -39,11 +39,17 @@ export const useStore = create(
         login: async (did, passkey) => {
           await sleep(600)
           const s = get()
-          const targetDid = did || (s.identities[0] ? s.identities[0].did : SELF_DID)
-          const found = s.identities.find((i) => i.did === targetDid)
+          const query = (did || '').trim()
+          if (!query) throw new Error('DID or Username is required')
+          const found = s.identities.find((i) =>
+            i.did === query ||
+            i.did.toLowerCase() === query.toLowerCase() ||
+            (i.name && i.name.toLowerCase() === query.toLowerCase())
+          )
           if (!found) {
-            throw new Error(`Identity not found: ${targetDid}`)
+            throw new Error(`Identity "${query}" not found. Please verify or create a new DID.`)
           }
+          const targetDid = found.did
           const expectedPasskey = found.passkey || 'passkey123'
           if (passkey && passkey !== expectedPasskey) {
             throw new Error('INCORRECT_PASSKEY')

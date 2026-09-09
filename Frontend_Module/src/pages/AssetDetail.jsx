@@ -236,7 +236,7 @@ Integrity Proof: SHA-256 Hash Matching On-Chain State
                   viewerTab === 'raw' ? 'bg-accent text-base-950 font-medium' : 'text-steel-400 hover:text-steel-200'
                 }`}
               >
-                <Binary size={11} /> Ciphertext / Hash
+                <Binary size={11} /> Digital Fingerprint
               </button>
               <button
                 onClick={() => setViewerTab('proof')}
@@ -244,7 +244,7 @@ Integrity Proof: SHA-256 Hash Matching On-Chain State
                   viewerTab === 'proof' ? 'bg-accent text-base-950 font-medium' : 'text-steel-400 hover:text-steel-200'
                 }`}
               >
-                <GitCommit size={11} /> Merkle Proof
+                <GitCommit size={11} /> Integrity Verification
               </button>
             </div>
             <Btn variant='primary' className='!py-1' onClick={handleDownload}>
@@ -349,20 +349,20 @@ Integrity Proof: SHA-256 Hash Matching On-Chain State
 
                   <div className='grid grid-cols-2 gap-4 text-[12px] font-mono py-1'>
                     <div>
-                      <span className='text-steel-500 block text-[10px] uppercase'>Owner DID:</span>
+                      <span className='text-steel-500 block text-[10px] uppercase'>Owner Identifier:</span>
                       <span className='text-steel-300 break-all'>{ownerDid}</span>
                     </div>
                     <div>
-                      <span className='text-steel-500 block text-[10px] uppercase'>Document Hash (SHA-256):</span>
+                      <span className='text-steel-500 block text-[10px] uppercase'>Security Seal (Digital Fingerprint):</span>
                       <span className='text-steel-300 break-all'>{docHash}</span>
                     </div>
                   </div>
 
                   <div className='p-3.5 bg-base-950/80 border border-steel-850 rounded text-[11px] font-mono text-steel-400 space-y-1.5 leading-relaxed'>
-                    <div className='text-steel-200 font-medium'>Cryptographic Document Metadata:</div>
-                    <div>• AES-256-GCM symmetric ciphertext commitment anchored to Identity Registry</div>
-                    <div>• Root Version: v{owner?.rootVersion || docVersion} (Atomic state transition verified)</div>
-                    <div>• Storage Commitment: {asset.storageCommitment || 'IPFS / Pinata staged object'}</div>
+                    <div className='text-steel-200 font-medium'>Document Security & Integrity Details:</div>
+                    <div>• End-to-end encrypted: Only you and authorized recipients can decrypt this file</div>
+                    <div>• Security State: Version v{owner?.rootVersion || docVersion} (Anchored to decentralized ledger)</div>
+                    <div>• Storage Commitment: {asset.storageCommitment || 'Secure verified storage commitment'}</div>
                   </div>
 
                   <div className='pt-2 flex justify-between items-center text-[11px] font-mono text-steel-500 border-t border-steel-850'>
@@ -371,7 +371,7 @@ Integrity Proof: SHA-256 Hash Matching On-Chain State
                       onClick={handleDownload}
                       className='text-accent hover:text-accent-bright flex items-center gap-1 font-semibold'
                     >
-                      <Download size={11} /> Download full plaintext payload
+                      <Download size={11} /> Download original file
                     </button>
                   </div>
                 </div>
@@ -383,14 +383,14 @@ Integrity Proof: SHA-256 Hash Matching On-Chain State
         {viewerTab === 'raw' && (
           <div className='space-y-2'>
             <div className='flex justify-between items-center text-[11px] font-mono text-steel-400'>
-              <span>Registered SHA-256 Leaf Digest:</span>
+              <span>Verified Digital Security Fingerprint:</span>
               <CopyText value={docHash} />
             </div>
             <div className='inset-panel p-3 font-mono text-[11px] text-steel-300 break-all bg-base-950 leading-relaxed'>
               {docHash}
             </div>
             <p className='text-[11px] text-steel-500 font-mono'>
-              This 32-byte cryptographic digest uniquely represents the immutable contents of document v{docVersion} in the global Merkle root.
+              This unique digital fingerprint guarantees that this document is authentic and has not been altered or tampered with since being registered.
             </p>
           </div>
         )}
@@ -398,20 +398,20 @@ Integrity Proof: SHA-256 Hash Matching On-Chain State
         {viewerTab === 'proof' && (
           <div className='inset-panel p-4 font-mono text-[11px] text-steel-300 bg-base-950 space-y-2'>
             <div className='flex justify-between'>
-              <span className='text-steel-500'>Algorithm:</span>
-              <span className='text-ok'>sha256-leaf0x00-parent0x01-empty0x02-v1</span>
+              <span className='text-steel-500'>Integrity Standard:</span>
+              <span className='text-ok'>Cryptographic Tree Proof (SHA-256)</span>
             </div>
             <div className='flex justify-between'>
-              <span className='text-steel-500'>Root Version:</span>
+              <span className='text-steel-500'>Security State Version:</span>
               <span>v{owner?.rootVersion || docVersion}</span>
             </div>
             <div className='flex justify-between'>
-              <span className='text-steel-500'>Leaf Position (Ordinal):</span>
+              <span className='text-steel-500'>Ledger Entry Slot:</span>
               <span>0</span>
             </div>
             <div className='flex justify-between'>
-              <span className='text-steel-500'>Proof Status:</span>
-              <span className='text-ok font-semibold'>VALID & RECONCILED (0 drift)</span>
+              <span className='text-steel-500'>Tamper-Proof Verification:</span>
+              <span className='text-ok font-semibold'>VERIFIED & UNTAMPERED</span>
             </div>
           </div>
         )}

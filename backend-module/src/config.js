@@ -29,6 +29,7 @@ export function loadConfig() {
   const atlas = loadAtlasFile();
   return {
     port: int(process.env.PORT, 3000),
+    host: process.env.HOST ?? '0.0.0.0',
     chainId: int(process.env.CHAIN_ID, 31337),
     chainRpcUrl: process.env.CHAIN_RPC_URL ?? 'http://127.0.0.1:8545',
     deploymentManifestPath: process.env.DEPLOYMENT_MANIFEST ?? '../blockchain-module/deployments/anvil.json',
