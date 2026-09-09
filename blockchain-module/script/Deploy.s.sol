@@ -16,7 +16,7 @@ import {InheritanceRegistry} from "../src/InheritanceRegistry.sol";
 ///         asserts every final address/role/cross-contract writer permission
 ///         before completing, revokes bootstrap deployer privileges, and
 ///         writes a deployment manifest JSON (signature applied off-chain).
-contract Deploy is Script {
+contract DeployScript is Script {
     MerkleRootRegistry public merkleRootRegistry;
     IdentityRegistry public identityRegistry;
     AssetAccessRegistry public assetAccessRegistry;
@@ -100,8 +100,11 @@ contract Deploy is Script {
         vm.serializeUint(obj, "confirmationDepth", 1);
         manifestJson = vm.serializeAddress(obj, "deployer", deployer);
 
+        string memory manifestPath = block.chainid == 11155111
+            ? "./deployments/sepolia.json"
+            : "./deployments/anvil.json";
         vm.createDir("./deployments", true);
-        vm.writeFile("./deployments/anvil.json", manifestJson);
+        vm.writeFile(manifestPath, manifestJson);
 
         addresses = new address[](5);
         addresses[0] = address(merkleRootRegistry);
@@ -110,7 +113,15 @@ contract Deploy is Script {
         addresses[3] = address(assetRegistry);
         addresses[4] = address(inheritanceRegistry);
 
-        console2.log("Deployment manifest written to ./deployments/anvil.json");
+        console2.log("=========================================");
+        console2.log("Deployment Successful!");
+        console2.log("Manifest written to:", manifestPath);
+        console2.log("IdentityRegistry:", address(identityRegistry));
+        console2.log("MerkleRootRegistry:", address(merkleRootRegistry));
+        console2.log("AssetAccessRegistry:", address(assetAccessRegistry));
+        console2.log("AssetRegistry:", address(assetRegistry));
+        console2.log("InheritanceRegistry:", address(inheritanceRegistry));
+        console2.log("=========================================");
     }
 
     function _grantRoles(

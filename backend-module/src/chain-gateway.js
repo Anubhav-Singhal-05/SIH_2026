@@ -1,8 +1,11 @@
 import { createHash } from 'node:crypto';
 import { createPublicClient, http, decodeFunctionResult, encodeFunctionData, encodeAbiParameters, keccak256 } from 'viem';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DomainError, ErrorCode, CONTRACT_ERROR_MAP } from './errors.js';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 /**
  * ChainGateway (spec §5). Typed reads against deployed contracts, calldata
@@ -118,8 +121,16 @@ export class ChainGateway {
 }
 
 function loadAbi(artifactsDir, name) {
-  const artifact = JSON.parse(readFileSync(resolve(artifactsDir, `${name}.sol`, `${name}.json`), 'utf8'));
-  return artifact.abi;
+  const directPath = resolve(artifactsDir, `${name}.sol`, `${name}.json`);
+  if (existsSync(directPath)) {
+    return JSON.parse(readFileSync(directPath, 'utf8')).abi;
+  }
+  const fallbackPath = resolve(HERE, 'abis', `${name}.json`);
+  if (existsSync(fallbackPath)) {
+    const file = JSON.parse(readFileSync(fallbackPath, 'utf8'));
+    return Array.isArray(file) ? file : (file.abi ?? file);
+  }
+  throw new Error(`ABI artifact for ${name} not found at ${directPath} or ${fallbackPath}`);
 }
 
 /**
