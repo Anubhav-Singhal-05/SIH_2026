@@ -62,7 +62,7 @@ export default function Login() {
             <div className='w-2.5 h-2.5 bg-accent rounded-full' />
           </div>
           <div>
-            <div className='text-[13px] font-semibold tracking-[0.2em] text-steel-100'>SAMPATTIKOSH</div>
+            <div className='text-[13px] font-semibold tracking-[0.2em] text-steel-100'>AEGIS REGISTRY</div>
             <div className='text-[9px] tracking-[0.24em] text-steel-500'>DID IDENTITY / ACCESS / ASSET PLATFORM</div>
           </div>
         </div>
