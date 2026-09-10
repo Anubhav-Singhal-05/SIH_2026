@@ -15,6 +15,10 @@ export class IdentityProjectionRepository {
     return this.byDidHash.get(didHash.toLowerCase());
   }
 
+  list() {
+    return [...this.byDidHash.values()];
+  }
+
   requireActive(didHash) {
     const id = this.get(didHash);
     if (!id || id.status === 'NONE') throw new DomainError(ErrorCode.DOCUMENT_NOT_READY, 'unknown identity');
@@ -57,10 +61,10 @@ export class ProjectionRepository {
     return this.assets.get(assetId.toString());
   }
 
-  async getAuthorizedList({ ownerDidHash, status, limit = 50 }) {
-    const key = ownerDidHash.toLowerCase();
+  async getAuthorizedList({ ownerDidHash, status, limit = 50, all }) {
+    const key = (ownerDidHash || '').toLowerCase();
     const items = [...this.assets.values()]
-      .filter((a) => a.ownerDidHash.toLowerCase() === key && (!status || a.status === status))
+      .filter((a) => (all || (a.ownerDidHash && a.ownerDidHash.toLowerCase() === key)) && (!status || a.status === status))
       .slice(0, limit);
     return { items, nextCursor: null, hasMore: false, lastIndexedBlock: 1 };
   }
@@ -157,10 +161,30 @@ export class MongoRepository {
         return {
           did: doc.did,
           didHash: doc.did_hash,
+          name: doc.name || doc.did.split(':')[2] || 'Operator',
+          passkey: doc.passkey || 'passkey123',
           controller: doc.controller,
+          controllerAddress: doc.controller,
+          organization: doc.organization || '',
+          email: doc.email || '',
           encryptionKeyHash: doc.encryption_key_hash,
           status: String(doc.status).toUpperCase(),
         };
+      },
+      list: async () => {
+        const docs = await this.db.collection('identities').find({ status: { $ne: 'revoked' } }).toArray();
+        return docs.map((doc) => ({
+          did: doc.did,
+          didHash: doc.did_hash,
+          name: doc.name || doc.did.split(':')[2] || 'Operator',
+          passkey: doc.passkey || 'passkey123',
+          controller: doc.controller,
+          controllerAddress: doc.controller,
+          organization: doc.organization || '',
+          email: doc.email || '',
+          encryptionKeyHash: doc.encryption_key_hash,
+          status: String(doc.status).toUpperCase(),
+        }));
       },
       requireActive: async (didHash) => {
         const hex = normalizeHex32(didHash);
@@ -170,7 +194,11 @@ export class MongoRepository {
         return {
           did: doc.did,
           didHash: doc.did_hash,
+          name: doc.name || doc.did.split(':')[2] || 'Operator',
           controller: doc.controller,
+          controllerAddress: doc.controller,
+          organization: doc.organization || '',
+          email: doc.email || '',
           encryptionKeyHash: doc.encryption_key_hash,
           status: 'ACTIVE',
         };
@@ -183,7 +211,11 @@ export class MongoRepository {
             $set: {
               did: identity.did,
               did_hash: hex,
-              controller: identity.controller,
+              name: identity.name,
+              passkey: identity.passkey || 'passkey123',
+              controller: identity.controller || identity.controllerAddress,
+              organization: identity.organization || '',
+              email: identity.email || '',
               encryption_key_hash: identity.encryptionKeyHash ?? null,
               status: String(identity.status ?? 'active').toLowerCase(),
               finalized: true,
@@ -203,29 +235,42 @@ export class MongoRepository {
     if (!doc) return null;
     return {
       assetId: doc.asset_id,
+      name: doc.name || 'Untitled Document',
+      contentType: doc.contentType || 'application/pdf',
+      ownerDid: doc.ownerDid || '',
       ownerDidHash: doc.owner_did_hash,
       documentHash: doc.document_hash,
       metadataHash: doc.metadata_hash,
       storageCommitment: doc.storage_commitment,
       documentVersion: BigInt(doc.current_version ?? 1),
       status: String(doc.status).toUpperCase(),
+      versions: doc.versions || [],
       finalized: doc.finalized ?? true,
     };
   }
 
   async upsertAsset(asset) {
     const id = String(asset.assetId);
+    const docVer = Number(asset.documentVersion ?? 1);
+    const docHash = normalizeHex32(asset.documentHash);
+    const metaHash = normalizeHex32(asset.metadataHash ?? '0x' + '00'.repeat(32));
+    const storageCommit = normalizeHex32(asset.storageCommitment ?? '0x' + '00'.repeat(32));
+
     await this.db.collection('assets').updateOne(
       { asset_id: id },
       {
         $set: {
           asset_id: id,
+          name: asset.name || 'Untitled Document',
+          contentType: asset.contentType || 'application/pdf',
+          ownerDid: asset.ownerDid || '',
           owner_did_hash: normalizeHex32(asset.ownerDidHash),
-          document_hash: normalizeHex32(asset.documentHash),
-          metadata_hash: normalizeHex32(asset.metadataHash),
-          storage_commitment: normalizeHex32(asset.storageCommitment ?? '0x' + '00'.repeat(32)),
-          current_version: Number(asset.documentVersion ?? 1),
+          document_hash: docHash,
+          metadata_hash: metaHash,
+          storage_commitment: storageCommit,
+          current_version: docVer,
           status: String(asset.status ?? 'active').toLowerCase(),
+          versions: asset.versions || [{ version: docVer, hash: docHash, note: 'initial mint', at: Date.now() }],
           finalized: true,
           updated_at: new Date(),
         },
@@ -233,25 +278,51 @@ export class MongoRepository {
       },
       { upsert: true }
     );
+
+    await this.db.collection('document_versions').updateOne(
+      { asset_id: id, version: docVer },
+      {
+        $set: {
+          asset_id: id,
+          version: docVer,
+          document_hash: docHash,
+          metadata_hash: metaHash,
+          storage_commitment: storageCommit,
+          canonical: true,
+          finalized: true,
+          created_at: new Date(),
+        },
+      },
+      { upsert: true }
+    );
   }
 
-  async getAuthorizedList({ ownerDidHash, status, limit = 50, cursor }) {
-    if (this.assetRepo) {
-      return this.assetRepo.getAuthorizedList({ ownerDidHash, status, limit, cursor });
+  async getAuthorizedList({ ownerDidHash, status, limit = 50, cursor, all }) {
+    if (this.assetRepo && !all && ownerDidHash) {
+      try {
+        const res = await this.assetRepo.getAuthorizedList({ ownerDidHash, status, limit, cursor });
+        if (res && res.items && res.items.length > 0) return res;
+      } catch {}
     }
     const filter = {
-      owner_did_hash: normalizeHex32(ownerDidHash),
+      ...(all || !ownerDidHash ? {} : { owner_did_hash: normalizeHex32(ownerDidHash) }),
       ...(status ? { status: status.toLowerCase() } : {}),
     };
     const docs = await this.db.collection('assets').find(filter).limit(limit).toArray();
     const items = docs.map((d) => ({
       assetId: d.asset_id,
+      name: d.name || 'Untitled Document',
+      contentType: d.contentType || 'application/pdf',
+      ownerDid: d.ownerDid || '',
       ownerDidHash: d.owner_did_hash,
       documentHash: d.document_hash,
       metadataHash: d.metadata_hash,
       storageCommitment: d.storage_commitment,
       documentVersion: BigInt(d.current_version ?? 1),
       status: String(d.status).toUpperCase(),
+      versions: d.versions || [],
+      createdAt: d.created_at || d.createdAt || Date.now(),
+      updatedAt: d.updated_at || d.updatedAt || Date.now(),
     }));
     return { items, nextCursor: null, hasMore: false };
   }

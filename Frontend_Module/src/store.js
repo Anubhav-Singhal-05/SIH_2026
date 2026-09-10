@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { identities as seedIdentities, assets as seedAssets, grants as seedGrants, inheritanceRule as seedRule, audits as seedAudits, SELF_DID } from './mock/fixtures'
 import { uuid, hex64, now, ERROR_COPY, hex } from './mock/api'
+import { api, setAuthToken } from './services/api'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 export const STEP_ORDER = ['STAGED','AWAITING_STEP_UP','AWAITING_SIGNATURE','SUBMITTED','CONFIRMED']
@@ -37,23 +38,41 @@ export const useStore = create(
         // ---- session ----
         session: null,
         login: async (did, passkey) => {
-          await sleep(600)
           const s = get()
           const query = (did || '').trim()
           if (!query) throw new Error('DID or Username is required')
-          const found = s.identities.find((i) =>
-            i.did === query ||
-            i.did.toLowerCase() === query.toLowerCase() ||
-            (i.name && i.name.toLowerCase() === query.toLowerCase())
-          )
-          if (!found) {
-            throw new Error(`Identity "${query}" not found. Please verify or create a new DID.`)
+
+          let loginData = null
+          try {
+            loginData = await api.login({ did: query, passkey })
+            if (loginData?.accessToken) {
+              setAuthToken(loginData.accessToken)
+            }
+          } catch (err) {
+            console.warn('[store] Backend login fallback to local storage:', err.message)
+            if (err.message === 'Incorrect passkey') {
+              throw new Error('INCORRECT_PASSKEY')
+            }
+            const foundLocal = s.identities.find((i) =>
+              i.did === query ||
+              i.did.toLowerCase() === query.toLowerCase() ||
+              (i.name && i.name.toLowerCase() === query.toLowerCase())
+            )
+            if (!foundLocal) {
+              throw new Error(err.message || `Identity "${query}" not found. Please verify or create a new DID.`)
+            }
+            if (passkey && passkey !== (foundLocal.passkey || 'passkey123')) {
+              throw new Error('INCORRECT_PASSKEY')
+            }
+            loginData = {
+              did: foundLocal.did,
+              name: foundLocal.name,
+              controllerAddress: foundLocal.controllerAddress,
+              accessToken: hex(32),
+            }
           }
-          const targetDid = found.did
-          const expectedPasskey = found.passkey || 'passkey123'
-          if (passkey && passkey !== expectedPasskey) {
-            throw new Error('INCORRECT_PASSKEY')
-          }
+
+          const targetDid = loginData.did
           const didRule = (s.inheritancesByDid && s.inheritancesByDid[targetDid]) || (targetDid === SELF_DID ? { ...seedRule } : {
             ownerDid: targetDid,
             defaultNomineeDid: '',
@@ -68,16 +87,21 @@ export const useStore = create(
             activatedAt: null,
             batchProgress: [],
           })
+
           set({
             session: {
               did: targetDid,
-              accessToken: hex(32),
+              accessToken: loginData.accessToken,
               loginAt: now(),
-              name: found?.name || targetDid.split(':')[2] || 'Operator',
-              controllerAddress: found?.controllerAddress || '0x' + hex(40),
+              name: loginData.name || targetDid.split(':')[2] || 'Operator',
+              controllerAddress: loginData.controllerAddress || '0x' + hex(40),
             },
             inheritance: didRule,
           })
+
+          // Asynchronously sync live MongoDB Atlas state (assets and audit events)
+          get().syncBackendState(targetDid).catch(() => {})
+
           return { ok: true }
         },
         verifyPasskey: (did, passkey) => {
@@ -87,30 +111,48 @@ export const useStore = create(
           const expected = id.passkey || 'passkey123'
           return passkey === expected
         },
-        logout: () => set({ session: null }),
+        logout: () => {
+          setAuthToken(null)
+          set({ session: null })
+        },
         registerDid: async ({ name, did, controllerAddress, organization, email, passkey }) => {
-          await sleep(800)
           const cleanName = (name || 'operator').trim()
           const finalDid = did?.trim() || ('did:sih:' + cleanName.toLowerCase().replace(/[^a-z0-9.]/g, '.') + '.main')
           const controller = controllerAddress?.trim() || ('0x' + hex(40))
+
+          let backendId = null
+          try {
+            backendId = await api.registerIdentity({
+              name: cleanName,
+              did: finalDid,
+              controllerAddress: controller,
+              organization: organization?.trim() || 'SIH Platform Identity',
+              email: email?.trim() || '',
+              passkey: passkey || 'passkey123',
+            })
+          } catch (err) {
+            console.warn('[store] Backend registration failed, continuing with local sync:', err.message)
+          }
+
           const id = {
-            did: finalDid,
-            name: cleanName,
+            did: backendId?.did || finalDid,
+            name: backendId?.name || cleanName,
             passkey: passkey || 'passkey123',
-            controllerAddress: controller,
-            encryptionKeyFingerprint: '0x' + hex(20).toUpperCase(),
-            organization: organization?.trim() || 'Aegis Platform Identity',
+            controllerAddress: backendId?.controllerAddress || controller,
+            encryptionKeyFingerprint: backendId?.encryptionKeyFingerprint || ('0x' + hex(20).toUpperCase()),
+            organization: organization?.trim() || 'SIH Platform Identity',
             email: email?.trim() || '',
-            status: 'ACTIVE',
+            status: backendId?.status || 'ACTIVE',
             rootVersion: 1,
             rootHistory: [{ version: 1, rootHash: hex64(), at: now(), action: 'genesis' }],
           }
+
           set((s) => ({
-            identities: [id, ...s.identities.filter((x) => x.did !== finalDid)],
+            identities: [id, ...s.identities.filter((x) => x.did !== id.did)],
             inheritancesByDid: {
               ...(s.inheritancesByDid || {}),
-              [finalDid]: {
-                ownerDid: finalDid,
+              [id.did]: {
+                ownerDid: id.did,
                 defaultNomineeDid: '',
                 perAssetOverrides: [],
                 authoritySet: [
@@ -127,11 +169,76 @@ export const useStore = create(
           }))
           addAudit({
             action: 'identity_registered',
-            target: finalDid,
-            actorDid: finalDid,
+            target: id.did,
+            actorDid: id.did,
             result: 'success',
           })
           return id
+        },
+
+        syncBackendState: async (did) => {
+          const s = get()
+          const targetDid = did || s.session?.did
+          if (!targetDid) return
+
+          try {
+            // 1. Fetch assets from MongoDB Atlas
+            const res = await api.fetchAssets(targetDid)
+            if (res && Array.isArray(res.items) && res.items.length > 0) {
+              const remoteAssets = res.items.map((item) => ({
+                assetId: String(item.assetId || item.asset_id),
+                name: item.name || 'Untitled Document',
+                contentType: item.contentType || 'application/pdf',
+                ownerDid: item.ownerDid || targetDid,
+                documentVersion: Number(item.documentVersion || 1),
+                status: item.status || 'CONFIRMED',
+                documentHash: item.documentHash || item.document_hash,
+                createdAt: item.createdAt || now(),
+                updatedAt: item.updatedAt || now(),
+                versions: item.versions || [],
+                integrity: 'VERIFIED',
+              }))
+
+              set((state) => {
+                const remoteMap = new Map(remoteAssets.map((a) => [String(a.assetId), a]))
+                const merged = [
+                  ...remoteAssets,
+                  ...state.assets.filter((a) => !remoteMap.has(String(a.assetId))),
+                ]
+                return { assets: merged }
+              })
+            }
+
+            // 2. Fetch live audit events from MongoDB Atlas
+            const auditRes = await api.fetchAuditLogs()
+            if (auditRes && Array.isArray(auditRes.events) && auditRes.events.length > 0) {
+              set((state) => {
+                const existingKeys = new Set(state.audits.map((a) => a.requestId || a.id))
+                const newEvents = auditRes.events.filter((e) => !existingKeys.has(e.requestId || e.id))
+                return { audits: [...newEvents, ...state.audits] }
+              })
+            }
+
+            // 3. Sync identities from MongoDB Atlas
+            const idRes = await api.fetchIdentities()
+            if (idRes && Array.isArray(idRes.items) && idRes.items.length > 0) {
+              set((state) => {
+                const remoteDids = new Set(idRes.items.map((i) => i.did))
+                const mergedIdentities = [
+                  ...idRes.items.map((i) => ({
+                    ...i,
+                    passkey: i.passkey || 'passkey123',
+                    rootVersion: 1,
+                    rootHistory: [{ version: 1, rootHash: hex64(), at: now(), action: 'genesis' }],
+                  })),
+                  ...state.identities.filter((i) => !remoteDids.has(i.did)),
+                ]
+                return { identities: mergedIdentities }
+              })
+            }
+          } catch (err) {
+            console.warn('[store] syncBackendState error:', err.message)
+          }
         },
 
         // ---- entities ----
@@ -263,6 +370,17 @@ export const useStore = create(
             }
             s.addAsset(confirmedAsset)
             if (s.session?.did) s.bumpRoot(s.session.did, 'asset_minted')
+
+            // Persist asset to MongoDB Atlas through backend
+            api.createAsset({
+              assetId: confirmedAsset.assetId,
+              name: confirmedAsset.name,
+              contentType: confirmedAsset.contentType,
+              ownerDid: confirmedAsset.ownerDid || s.session?.did,
+              documentHash: confirmedAsset.documentHash,
+              documentVersion: confirmedAsset.documentVersion || 1,
+              versions: confirmedAsset.versions,
+            }).catch((e) => console.warn('[store] Backend asset create warning:', e.message))
           }
           if (op.type === 'update' && op.relatedId) {
             const a = s.assets.find((x) => String(x.assetId) === String(op.relatedId))
@@ -281,10 +399,26 @@ export const useStore = create(
             s.patchAsset(op.relatedId, { ownerDid: op.payload.to })
             if (op.payload.from) s.bumpRoot(op.payload.from, 'asset_transferred')
             if (op.payload.to) s.bumpRoot(op.payload.to, 'asset_transferred')
+
+            api.createTransferIntent(op.relatedId, {
+              callerDid: s.session?.did,
+              toDid: op.payload.to,
+              verified: true,
+            }).catch((e) => console.warn('[store] Backend transfer intent warning:', e.message))
           }
           if (op.type === 'grant' && op.payload) {
             s.addGrant(op.payload)
             if (s.session?.did) s.bumpRoot(s.session.did, 'access_granted')
+
+            if (op.payload.assetId) {
+              api.createAccessGrantIntent(op.payload.assetId, {
+                callerDid: s.session?.did,
+                granteeDid: op.payload.granteeDid,
+                permissionMask: op.payload.permissionMask || 1,
+                expiresAtSeconds: op.payload.expiresAtSeconds || 86400,
+                verified: true,
+              }).catch((e) => console.warn('[store] Backend grant intent warning:', e.message))
+            }
           }
           if (op.type === 'revoke' && op.payload) {
             s.revokeGrant(op.payload)
